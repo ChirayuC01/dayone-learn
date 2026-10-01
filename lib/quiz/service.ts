@@ -6,19 +6,13 @@ import { canRead, dayAccess, moduleTestAccess } from "../learning/access.ts";
 import { unlockStateOf } from "../learning/enrollment.ts";
 import { recordActivity, retakesRewardedToday, type Rewards } from "../gamification/service.ts";
 import { lessonQuizAwards, moduleTestAwards } from "../gamification/xp.ts";
+import { queueWrongAnswers } from "../review/service.ts";
 import { localDate } from "../time/zoned.ts";
 import { gradeQuiz, type GivenAnswer, type GradableQuestion, type QuestionResult } from "./grade.ts";
+import { QuizError } from "./errors.ts";
 import { applyAttempt, ATTEMPTS_PER_MINUTE, MODULE_PASS_RATIO } from "./progress.ts";
 
-export class QuizError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = "QuizError";
-  }
-}
+export { QuizError };
 
 export type Scope = "LESSON" | "MODULE";
 
@@ -144,6 +138,9 @@ export async function submitAttempt(
     });
     return { attempt, prev, next, passed: undefined };
   });
+
+  // Missed questions go to the review queue.
+  await queueWrongAnswers(db, { userId: input.userId, timezone: input.timezone, courseId: target.courseId, results: grade.results, now });
 
   // XP, streak, goal, level and achievements.
   const awards = isModule

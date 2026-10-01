@@ -71,6 +71,15 @@ export function moduleTestAwards(a: { userId: string; moduleId: string; courseId
   return out;
 }
 
+/**
+ * A full review session (5 due questions) earns 5 XP, for at most 4 sessions a day. The refKey uses the
+ * day's session slot, so a replayed request can't earn a slot twice.
+ */
+export function reviewSessionAwards(a: { userId: string; date: string; answered: number; sessionsRewardedToday: number }): Award[] {
+  if (a.answered < XP.reviewSessionSize || a.sessionsRewardedToday >= XP.reviewSessionsPerDay) return [];
+  return [{ reason: "REVIEW_SESSION", amount: XP.reviewSession, refKey: `review:${a.userId}:${a.date}:${a.sessionsRewardedToday + 1}` }];
+}
+
 export function streakMilestoneAwards(userId: string, reached: number[]): Award[] {
   return reached
     .filter((n) => XP.streakMilestones[n])

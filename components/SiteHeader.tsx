@@ -13,6 +13,7 @@ export async function SiteHeader() {
       </Link>
       <nav aria-label="Site">
         {viewer && <NavLink href="/dashboard">Dashboard</NavLink>}
+        {viewer && <NavLink href="/review">Review</NavLink>}
         <NavLink href="/courses" matchSubpaths>
           Courses
         </NavLink>

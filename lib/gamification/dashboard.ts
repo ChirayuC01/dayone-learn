@@ -1,6 +1,7 @@
 // Everything the dashboard hook loop needs, in one place. Server-only.
 import { cache } from "react";
 import { db } from "@/lib/db";
+import { reviewableItems } from "@/lib/review/service";
 import { addDays, dateColumn, fromDateColumn, localDate } from "@/lib/time/zoned";
 import { DEFAULT_GOAL } from "./goal";
 import { heatmapWeeks, type HeatDay } from "./heatmap";
@@ -19,7 +20,7 @@ export const getHookLoop = cache(async (userId: string, timezone: string) => {
     db.dailyActivity.findUnique({ where: { userId_date: { userId, date: dateColumn(today) } } }),
     db.userAchievement.findMany({ where: { userId }, orderBy: { unlockedAt: "desc" }, take: 4, include: { achievement: true } }),
     db.userAchievement.count({ where: { userId } }),
-    db.reviewItem.count({ where: { userId, dueAt: { lte: new Date() } } }),
+    reviewableItems(db, userId, new Date()).then((items) => items.length),
     db.xpEvent.groupBy({ by: ["localDate", "courseId"], where: { userId, localDate: { gte: dateColumn(since) } }, _sum: { amount: true } }),
     db.dailyActivity.findMany({ where: { userId, frozen: true, date: { gte: dateColumn(since) } }, select: { date: true } }),
   ]);

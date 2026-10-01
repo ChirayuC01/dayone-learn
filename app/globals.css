@@ -368,6 +368,12 @@
       font-size: 18px;
     }
   }
+  /* four links + brand don't fit on small phones: keep the mark, drop the word */
+  @media (max-width: 440px) {
+    .sitebar .brand-name {
+      display: none;
+    }
+  }
 
   /* main column */
   .main {
@@ -1316,5 +1322,23 @@
     align-items: center;
     gap: 4px;
     margin-top: 8px;
+  }
+}
+
+/* review */
+@layer components {
+  .q-course {
+    color: var(--accent);
+  }
+  .boxes {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin: 18px 0 24px;
+  }
+  @media (max-width: 560px) {
+    .boxes {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 }

@@ -50,6 +50,7 @@ lib/                  business rules as pure, unit-tested functions, plus DB ser
   quiz/               grade.ts (grader), progress.ts (best scores, module pass), service.ts (submit + persist)
   gamification/       xp.ts · levels.ts · streak.ts · goal.ts · achievements.ts + catalog.ts · reading.ts ·
                       heatmap.ts (all pure) · service.ts (recordActivity) · dashboard.ts
+  review/             leitner.ts (boxes, due dates, session picking; pure) · service.ts (queue + sessions)
   users/              display names
 auth.ts               Auth.js v5 config (Prisma adapter, database sessions)
 components/           Markdown renderer, reader sidebar/drawer, track toggle, cards
@@ -73,6 +74,8 @@ Code under `lib/` that scripts import uses relative imports with explicit `.ts` 
 | `/learn/[slug]/module/[n]` | Module test (pass mark 70 %) |
 | `POST /api/attempts` | Submit a lesson quiz or module test for grading (returns XP and other rewards) |
 | `POST /api/reading` | Reading heartbeat: `start`, `beat`, `finish` |
+| `/review` | Spaced-repetition session: up to 5 due questions mixed from all enrolled courses |
+| `POST /api/review` | Grade a review session |
 
 Lesson Markdown is rendered on the server with GFM and `rehype-sanitize`. ` ```bash ` blocks get a `$` prompt per command line and a copy button, ` ```output ` blocks a dashed box, and any other fence a diagram box. Raw HTML is dropped except `<details>`/`<summary>`. An enrolled learner's track is stored on their enrollment; everyone else's in a per-course cookie.
 
@@ -104,7 +107,7 @@ All rules are pure functions in `lib/gamification/` with unit tests; `recordActi
 | Lesson quiz, first attempt | 2 per correct answer, +10 if perfect |
 | Retake that beats the best score | 1 per newly correct answer, for at most 3 rewarded retakes a day |
 | Module test passed (≥ 70 %) | 50 once; perfect +25 once |
-| Review session | 5 (phase 6) |
+| Review session of 5 due questions | 5, for at most 4 sessions a day |
 | Daily goal hit | +5 |
 | Streak of 7 / 30 / 100 days | +25 / +100 / +300, once each |
 | Course completed (every day read, every module test passed) | +200 |
@@ -115,6 +118,14 @@ All rules are pure functions in `lib/gamification/` with unit tests; `recordActi
 - **Daily goal:** 10 / 30 / 50 / 100 XP (default 30), changed from the dashboard.
 - **Achievements:** rows in the `Achievement` table with a `criteria` object (`{"type":"streak","gte":7}`, `{"type":"lessonAtHour","from":22,"to":24}`, …). Add rows with any type from `lib/gamification/achievements.ts` and they are evaluated after every XP-earning action and on enrolment. The seed loads the 12 in `catalog.ts`.
 - **Celebrations:** toasts for XP, level-ups, streaks, goals, achievements and course completion; confetti for the big ones, skipped under `prefers-reduced-motion`.
+
+## Review (spaced repetition)
+
+- Every question answered wrong in a lesson quiz or module test enters a Leitner queue in box 1 (or goes back to box 1).
+- A question in box 1–5 is due 1 / 2 / 4 / 8 / 16 days after it was last answered, at local midnight in the learner's zone.
+- `/review` serves up to 5 due questions, most overdue first, taking courses in turn so a session mixes them. Only active enrollments, the learner's track and non-hidden questions count.
+- Correct moves a question up a box (box 5 stays at 5); wrong sends it back to box 1.
+- `POST /api/review` grades on the server and only accepts questions that are due right now, so a replayed submission is rejected (409). Each session is stored as a `REVIEW` attempt; its answers count towards the Reviewer achievement.
 
 ## Seed data format
 
