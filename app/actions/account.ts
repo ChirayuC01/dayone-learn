@@ -37,6 +37,15 @@ export async function signInWithEmail(formData: FormData) {
   redirect("/signin/check-email");
 }
 
+/** E2E only: the test provider records the link instead of emailing it. */
+export async function signInWithTestProvider(formData: FormData) {
+  if (process.env.AUTH_TEST_PROVIDER !== "1") return;
+  const email = z.email().safeParse(String(formData.get("email") ?? "").trim().toLowerCase());
+  if (!email.success) return;
+  await signIn("test-email", { email: email.data, redirectTo: safeCallback(formData.get("callbackUrl")), redirect: false });
+  redirect("/signin/check-email");
+}
+
 export async function signOutAction() {
   await signOut({ redirectTo: "/" });
 }

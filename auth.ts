@@ -4,6 +4,7 @@ import type { Provider } from "next-auth/providers";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import Resend from "next-auth/providers/resend";
+import { testAuthEnabled, testEmailProvider } from "@/lib/auth/test-provider";
 import { db } from "@/lib/db";
 import { magicLinkEmail, sendEmail } from "@/lib/email";
 import { baseDisplayName, displayNameCandidates } from "@/lib/users/displayName";
@@ -26,6 +27,8 @@ providers.push(
     },
   }),
 );
+
+if (testAuthEnabled()) providers.push(testEmailProvider());
 
 /** Which providers are configured, for the sign-in page. */
 export const providerIds = providers.map((p) => (typeof p === "function" ? p().id : p.id));

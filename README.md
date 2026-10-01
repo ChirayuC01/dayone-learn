@@ -34,7 +34,8 @@ GitHub and Google buttons appear only when their env vars are set. Sessions are 
 | `npm run lint` · `typecheck` · `test` | ESLint · `tsc --noEmit` · Vitest |
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:deploy` | `prisma migrate deploy` (production) |
-| `npm run db:seed [slug]` | Load `reference/seed/<slug>/` (all courses if omitted) |
+| `npm run db:seed [slug]` | Load `reference/seed/<slug>/` (all courses if omitted); `-- --achievements` seeds only the achievement catalogue |
+| `npm run test:e2e` | Playwright end-to-end suite (see below) |
 | `npm run db:reset` | Drop and recreate the database (then run `db:seed`) |
 
 ## Layout
@@ -64,7 +65,7 @@ reference/            prototype.html (design system source) and seed content
 
 Code under `lib/` that scripts import uses relative imports with explicit `.ts` extensions and receives its Prisma client as an argument, so plain Node can run it without a bundler.
 
-## Pages (so far)
+## Pages
 
 | Route | What it shows |
 |---|---|
@@ -185,3 +186,118 @@ Shared by every app instance through the `RateLimit` table (one atomic upsert pe
 ## CI
 
 `.github/workflows/ci.yml` runs lint, typecheck, unit tests and a production build on Node 20. A second job applies the migrations to Postgres 16, checks that `schema.prisma` and the migrations are in sync, and runs the seed twice to prove it's idempotent.
+
+## End-to-end tests
+
+`e2e/learner-journey.spec.ts` walks the main loop on a production build:
+
+1. Sign in with the **test provider**: an email-link provider that exists only when `AUTH_TEST_PROVIDER=1` and keeps the link in memory instead of emailing it (`/api/test/magic-link` returns it; both 404 otherwise). It uses the real Auth.js verification-token and database-session flow. **Never set `AUTH_TEST_PROVIDER` in a real deployment.**
+2. Enroll in Linux on the WSL track at daily pace.
+3. Read Day 01 for real (end of the lesson, one minute, heartbeats) and take its quiz with every answer right.
+4. On the dashboard: 35 XP (10 reading + 20 quiz + 5 daily goal), a 1-day streak and the First Lesson achievement.
+5. Ingest Day 08 with `curl` through `PUT /api/ingest/courses/linux/lessons/8` (`e2e/fixtures/day-08.json`).
+6. Day 08 is locked on daily pace; after switching to self-paced it opens with its 6-question quiz.
+
+```bash
+createdb dayone_e2e            # once; or let `prisma migrate deploy` create it
+npm run test:e2e               # builds, starts on :3100, migrates + empties + seeds dayone_e2e, runs the test
+```
+
+The suite uses its own database (`E2E_DATABASE_URL`, default `postgresql://dayone:dayone@localhost:5432/dayone_e2e`); setup refuses any database whose name doesn't contain `e2e` or `test`, because it empties every table. It takes about two minutes, most of it the build and the one-minute read. CI runs it in the `e2e` job; to use a preinstalled Chromium set `PW_CHROMIUM_PATH`.
+
+## Deploying to Azure
+
+The app is a standard Next.js server (`output: "standalone"`) plus PostgreSQL, so it runs on Azure App Service (Linux) with Azure Database for PostgreSQL, and also on Vercel or any Node host.
+
+> **Node version:** Node 20 reached end of life in April 2026. Use the **Node 22 LTS** runtime stack on App Service (CI also builds on Node 20 to check compatibility). The seed and e2e setup need Node ≥ 22.18.
+
+### 1. Create the resources
+
+```bash
+RG=dayone; LOC=centralindia; APP=dayone-learn; PG=dayone-pg
+az group create -n $RG -l $LOC
+
+# PostgreSQL Flexible Server (Burstable B1ms is enough to start)
+az postgres flexible-server create -g $RG -n $PG -l $LOC --tier Burstable --sku-name Standard_B1ms \
+  --version 16 --admin-user dayone --admin-password '<strong password>' --public-access 0.0.0.0
+az postgres flexible-server db create -g $RG -s $PG -d dayone
+# --public-access 0.0.0.0 allows other Azure services (the web app). Add your own IP to run migrations from your machine:
+az postgres flexible-server firewall-rule create -g $RG -n $PG -r me --start-ip-address <your-ip> --end-ip-address <your-ip>
+
+# App Service (Linux, Node 22)
+az appservice plan create -g $RG -n $APP-plan --is-linux --sku B1
+az webapp create -g $RG -p $APP-plan -n $APP --runtime "NODE:22-lts"
+az webapp config set -g $RG -n $APP --startup-file "HOSTNAME=0.0.0.0 node server.js"
+```
+
+App Service sets `PORT`; `HOSTNAME=0.0.0.0` matters because App Service also sets `HOSTNAME` to the container's name, which would make the Next.js server listen on the wrong interface.
+
+### 2. App settings
+
+Set these under **Configuration → Application settings** (or `az webapp config appsettings set -g $RG -n $APP --settings KEY=value …`):
+
+| Setting | Value |
+|---|---|
+| `DATABASE_URL` | `postgresql://dayone:<password>@<server>.postgres.database.azure.com:5432/dayone?sslmode=require` |
+| `APP_URL` | `https://<app>.azurewebsites.net` (or your custom domain) |
+| `AUTH_SECRET` | `openssl rand -base64 32` |
+| `AUTH_TRUST_HOST` | `true` |
+| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET`, `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | optional; callback URLs `<APP_URL>/api/auth/callback/github` and `…/google` |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Resend key and a sender on a domain verified in Resend |
+| `ADMIN_EMAILS` | your email |
+| `INGEST_TOKEN` | a long random string; the same value goes into each scheduled Claude job's environment |
+| `CRON_SECRET` | a long random string; the same value goes into the cron caller |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `false` (the package is already built) |
+
+Do **not** set `AUTH_TEST_PROVIDER`.
+
+### 3. Deploy
+
+`.github/workflows/deploy-azure.yml` (run it from the Actions tab) installs, applies migrations, seeds the achievement catalogue, builds, assembles `.next/standalone` with the static files (without any `.env`), and deploys it with the publish profile. It needs:
+
+- secret `AZURE_WEBAPP_PUBLISH_PROFILE`: the web app's publish profile (`az webapp deployment list-publishing-profiles -g $RG -n $APP --xml`, or Overview → Download publish profile; basic-auth publishing must be enabled),
+- secret `DATABASE_URL_MIGRATE`: a connection string the GitHub runner can reach (open the server's firewall to it, or skip that step and run `npx prisma migrate deploy` yourself with your IP allowed),
+- variable `AZURE_WEBAPP_NAME`.
+
+By hand, the same steps are:
+
+```bash
+npm ci
+DATABASE_URL="<direct url>" npx prisma migrate deploy
+DATABASE_URL="<direct url>" node scripts/seed.ts --achievements
+npm run build
+cp -r .next/static .next/standalone/.next/static && rm -f .next/standalone/.env*
+cd .next/standalone && zip -qr ../../deploy.zip . && cd ../..
+az webapp deploy -g $RG -n $APP --src-path deploy.zip --type zip
+```
+
+Then register the Linux course (`PUT /api/ingest/courses/linux` with `reference/seed/linux/course.json`) and let the scheduled job publish lessons, or load the reference lessons once with `DATABASE_URL=<url> npm run db:seed linux`. Set the course LIVE in `/admin`.
+
+### 4. Scheduled jobs
+
+Two idempotent routes need calling (see [Leagues, reminders and cron jobs](#leagues-reminders-and-cron-jobs)):
+
+- **GitHub Actions** (already in the repo): `.github/workflows/cron.yml`. Add repository secrets `APP_URL` and `CRON_SECRET`.
+- **Azure Functions** timer instead (NCRONTAB has seconds and runs in UTC):
+
+  ```js
+  // Node.js v4 programming model
+  const { app } = require("@azure/functions");
+  const call = (job) => fetch(`${process.env.APP_URL}/api/cron/${job}`, { method: "POST", headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } });
+  app.timer("weeklyLeague", { schedule: "0 30 18 * * 0", handler: () => call("weekly-league") }); // Mon 00:00 IST
+  app.timer("reminders", { schedule: "0 7 * * * *", handler: () => call("reminders") });         // hourly
+  ```
+
+### 5. Checks after deploying
+
+- `curl -H "Authorization: Bearer $INGEST_TOKEN" $APP_URL/api/ingest/health` lists the courses.
+- Health check path for App Service: `/courses` (renders from the database; no auth needed).
+- Sign in, then `/admin` (with your email in `ADMIN_EMAILS`) shows the ingest log.
+- Fire each scheduled Claude job once and confirm its row in the ingest log. A Claude job can only call domains its network settings allow, so add the app's domain there (see `NEW_COURSE_PLAYBOOK.md`).
+
+### Scaling and other hosts
+
+- Everything that must be shared lives in PostgreSQL: sessions, rate limits, league placement (advisory lock) and email bookkeeping, so you can scale out to several instances.
+- **Connection poolers** (PgBouncer, Neon's `-pooler` host, Azure's built-in PgBouncer on port 6432): add `pgbouncer=true` to the app's `DATABASE_URL` and run migrations with a direct (non-pooled) URL.
+- **Vercel**: works as is (`output: "standalone"` is ignored there). Set the same environment variables, and schedule the cron routes with Vercel Cron; it sends `GET` with `Authorization: Bearer $CRON_SECRET`, which the routes accept.
+

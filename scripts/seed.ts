@@ -1,6 +1,7 @@
 // Seeds the achievement catalogue, then loads every course in reference/seed/<slug>/ through the same
 // service functions the ingest API uses.
-// Run: npm run db:seed   (Node ≥ 22.18 runs TypeScript directly; no build step)
+// Run: npm run db:seed [slug]   (Node ≥ 22.18 runs TypeScript directly; no build step)
+//      npm run db:seed -- --achievements   seeds only the achievement catalogue (use this in production)
 // Layout per course: course.json, day-NN.json, module-N.json
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -72,6 +73,7 @@ async function main() {
   const only = process.argv[2];
   try {
     await seedAchievements(db);
+    if (only === "--achievements") return; // production: content arrives through the ingest API
     const slugs = only ? [only] : (await readdir(SEED_DIR, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
     for (const slug of slugs) {
       console.log(`Seeding ${slug}`);

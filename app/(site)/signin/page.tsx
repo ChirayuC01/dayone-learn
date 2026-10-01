@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { signInWithEmail, signInWithProvider } from "@/app/actions/account";
+import { signInWithEmail, signInWithProvider, signInWithTestProvider } from "@/app/actions/account";
 import { providerIds } from "@/auth";
 import { getViewer } from "@/lib/learning/learner";
 
@@ -45,6 +45,22 @@ export default async function SignIn({ searchParams }: Props) {
               </button>
             </form>
           ))}
+
+        {providerIds.includes("test-email") && (
+          <form action={signInWithTestProvider} className="stack panel" data-testid="test-signin">
+            <p className="note" style={{ margin: 0 }}>
+              Test sign-in (AUTH_TEST_PROVIDER=1): the link is kept for the e2e suite instead of being emailed.
+            </p>
+            <input type="hidden" name="callbackUrl" value={callbackUrl} />
+            <label className="field">
+              <span>Test email</span>
+              <input name="email" type="email" required />
+            </label>
+            <button className="btn ghost wide" type="submit">
+              Test sign-in
+            </button>
+          </form>
+        )}
 
         <form action={signInWithEmail} className="stack">
           <input type="hidden" name="callbackUrl" value={callbackUrl} />

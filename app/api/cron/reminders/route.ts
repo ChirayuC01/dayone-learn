@@ -12,3 +12,6 @@ export async function POST(req: Request) {
   const pruned = await prune(db); // housekeeping: old rate-limit windows
   return NextResponse.json({ ok: true, reminders, rateLimitRowsPruned: pruned.count });
 }
+
+// Vercel Cron and some schedulers send GET (with the same Bearer header).
+export const GET = POST;

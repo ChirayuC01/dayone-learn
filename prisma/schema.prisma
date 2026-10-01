@@ -3,7 +3,9 @@
 // instants use DateTime (UTC). XP totals are always derived from XpEvent.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" for wherever it's built; Debian/OpenSSL 3 for Azure App Service (Linux, Node 20/22), even when built on Windows or macOS
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

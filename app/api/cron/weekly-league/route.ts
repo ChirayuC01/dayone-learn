@@ -13,3 +13,6 @@ export async function POST(req: Request) {
   const summaries = await sendWeeklySummaries(db, addDays(league.weekStart, -7));
   return NextResponse.json({ ok: true, league, summaries });
 }
+
+// Vercel Cron and some schedulers send GET (with the same Bearer header).
+export const GET = POST;
