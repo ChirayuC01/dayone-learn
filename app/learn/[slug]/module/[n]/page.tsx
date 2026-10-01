@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { pad, parseDayParam } from "@/lib/content/outline";
 import { getCourseOutline, getModuleTest } from "@/lib/content/queries";
-import { currentTrack } from "@/lib/content/track";
+import Link from "next/link";
+import { learnerView } from "@/lib/learning/learner";
 
 type Params = { params: Promise<{ slug: string; n: string }> };
 
@@ -20,8 +21,10 @@ export default async function ModuleTestPage({ params }: Params) {
   if (!course || !number) notFound();
   const mod = await getModuleTest(course.id, number);
   if (!mod) notFound();
-  const track = await currentTrack(course);
-  const questions = mod.questionCount(track);
+  const learner = await learnerView(course);
+  const questions = mod.questionCount(learner.track);
+  const outlineMod = course.modules.find((m) => m.number === mod.number)!;
+  const access = learner.moduleAccess(outlineMod);
 
   return (
     <>
@@ -34,8 +37,24 @@ export default async function ModuleTestPage({ params }: Params) {
       <h1 className="h1">
         Module {mod.number}: {mod.title}
       </h1>
-      {questions === 0 ? (
+      {access === "upcoming" || questions === 0 ? (
         <div className="empty">This test unlocks when the module&apos;s review lesson is published.</div>
+      ) : access === "enroll" ? (
+        <div className="lockbox">
+          <div className="t">Enroll to take this test</div>
+          <p className="prose-p">Module tests are part of the course. Enroll to take them and earn XP.</p>
+          <Link
+            className="btn"
+            href={learner.viewer ? `/courses/${slug}#enroll` : `/signin?callbackUrl=${encodeURIComponent(`/courses/${slug}`)}`}
+          >
+            {learner.viewer ? "Enroll" : "Sign in to enroll"}
+          </Link>
+        </div>
+      ) : access === "locked" ? (
+        <div className="lockbox">
+          <div className="t">Opens with Day {pad(mod.dayTo)}</div>
+          <p className="prose-p">Take this test after the module&apos;s review day. It covers every lesson in the module.</p>
+        </div>
       ) : (
         <>
           <p className="prose-p">
@@ -48,7 +67,7 @@ export default async function ModuleTestPage({ params }: Params) {
               <p>Covers the whole module · {questions} questions</p>
             </div>
             <div className="quiz-f">
-              <span className="note">Sign in to take the test and save your score.</span>
+              <span className="note">Tests arrive in the next update.</span>
             </div>
           </section>
         </>

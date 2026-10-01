@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
+import { TimezoneSync } from "@/components/TimezoneSync";
+import { getViewer } from "@/lib/learning/learner";
 import "./globals.css";
 
 const atkinson = Atkinson_Hyperlegible({
@@ -16,10 +18,14 @@ export const metadata: Metadata = {
   description: "Learn one 15-minute lesson a day.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const viewer = await getViewer();
   return (
     <html lang="en" className={`${atkinson.variable} ${bricolage.variable} ${jetbrains.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {viewer && !viewer.timezoneConfirmed && <TimezoneSync />}
+      </body>
     </html>
   );
 }

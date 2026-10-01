@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EnrollPanel } from "@/components/EnrollPanel";
+import { DayRow } from "@/components/learn/DayRow";
+import { lockChip } from "@/components/learn/Sidebar";
 import { TrackToggle } from "@/components/TrackToggle";
 import { buildOutline, pad } from "@/lib/content/outline";
 import { getCourseOutline } from "@/lib/content/queries";
 import { accentStyle } from "@/lib/content/theme";
-import { currentTrack } from "@/lib/content/track";
+import { canRead, continueDay } from "@/lib/learning/access";
+import { getReadDays, learnerView } from "@/lib/learning/learner";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -17,11 +21,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function CourseOverview({ params }: Params) {
   const course = await getCourseOutline((await params).slug);
   if (!course) notFound();
-  const track = await currentTrack(course);
-  const outline = buildOutline({ modules: course.modules, syllabus: course.syllabus, lessons: course.lessons }, track);
+  const learner = await learnerView(course);
+  const { track } = learner;
+  const outline = buildOutline(course, track, (d, p) => (p ? learner.access(d) : "upcoming"));
+  const openDays = learner.published.filter((d) => canRead(learner.access(d)));
+  const readDays = learner.active ? await getReadDays(learner.active.userId, course.id) : new Set<number>();
+  const continueTo = continueDay(openDays, readDays);
   const published = course.lessons.length;
   const first = course.lessons[0];
-  const latest = course.lessons.at(-1);
   const base = `/learn/${course.slug}`;
 
   return (
@@ -66,28 +73,26 @@ export default async function CourseOverview({ params }: Params) {
         </div>
       </div>
 
-      {course.tracks.length > 1 && (
-        <>
-          <h2 className="sec-h">Track</h2>
-          <p className="prose-p">Every lesson comes in {course.tracks.length} versions. Pick the one that matches your setup; you can switch any time.</p>
-          <div style={{ maxWidth: 420 }}>
-            <TrackToggle slug={course.slug} tracks={course.tracks} current={track} />
-          </div>
-        </>
-      )}
+      <EnrollPanel course={course} learner={learner} continueTo={continueTo} />
 
-      {first ? (
+      {!learner.active && first && (
         <div className="next">
           <div>
-            <div className="eyebrow">Start here · Day {pad(first.day)}</div>
+            <div className="eyebrow">Free preview · Day {pad(first.day)}</div>
             <div className="t">{outline.flatMap((m) => m.days).find((d) => d.day === first.day)?.title}</div>
-            {latest && latest.day !== first.day && <div className="s">Latest: Day {pad(latest.day)}</div>}
+            {course.tracks.length > 1 && <div className="s">Showing the {course.tracks.find((t) => t.key === track)?.label} version.</div>}
           </div>
-          <Link className="btn" href={`${base}/day/${pad(first.day)}`}>
-            Open lesson
+          <Link className="btn ghost" href={`${base}/day/${pad(first.day)}`}>
+            Read Day {pad(first.day)}
           </Link>
         </div>
-      ) : (
+      )}
+      {!learner.active && course.tracks.length > 1 && (
+        <div style={{ maxWidth: 420 }}>
+          <TrackToggle slug={course.slug} tracks={course.tracks} current={track} />
+        </div>
+      )}
+      {!first && (
         <div className="empty" style={{ margin: "8px 0 32px" }}>
           The first lesson hasn&apos;t been published yet.
         </div>
@@ -104,22 +109,14 @@ export default async function CourseOverview({ params }: Params) {
               {m.published}/{m.days.length}
             </span>
           </div>
-          {m.days.map((d) =>
-            d.state === "published" ? (
-              <Link key={d.day} className="day" href={`${base}/day/${pad(d.day)}`}>
-                <span className="n">{pad(d.day)}</span>
-                <span>{d.title}</span>
-              </Link>
-            ) : (
-              <span key={d.day} className="day locked">
-                <span className="n">{pad(d.day)}</span>
-                <span>{d.title}</span>
-                <span className="chip">upcoming</span>
-              </span>
-            ),
-          )}
+          {m.days.map((d) => (
+            <DayRow key={d.day} slug={course.slug} day={d} chip={lockChip(learner, d.day)} />
+          ))}
           {m.hasTest && (
-            <Link className="mtest" href={`${base}/module/${m.number}`}>
+            <Link
+              className={learner.moduleAccess(course.modules.find((x) => x.number === m.number)!) === "open" ? "mtest" : "mtest locked"}
+              href={`${base}/module/${m.number}`}
+            >
               <span className="n">★</span>
               <span>Module {m.number} test</span>
               <span className="chip new">test</span>

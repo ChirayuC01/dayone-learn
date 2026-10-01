@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CourseCard } from "@/components/CourseCard";
 import { getCatalogue } from "@/lib/content/queries";
+import { getViewer } from "@/lib/learning/learner";
 
 export const dynamic = "force-dynamic";
 
 export default async function Landing() {
+  if (await getViewer()) redirect("/dashboard");
   const courses = await getCatalogue();
   return (
     <div className="col-wide">

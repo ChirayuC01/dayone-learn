@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { NavLink } from "@/components/NavLink";
 import { TrackToggle } from "@/components/TrackToggle";
-import { buildOutline, pad } from "@/lib/content/outline";
+import { buildOutline } from "@/lib/content/outline";
 import type { CourseOutline } from "@/lib/content/queries";
+import { relativeDay } from "@/lib/learning/format";
+import type { LearnerView } from "@/lib/learning/learner";
+import { unlocksOn } from "@/lib/learning/unlock";
+import { DayRow } from "./DayRow";
 import { Drawer } from "./Drawer";
 
 export function CourseBrand({ course }: { course: Pick<CourseOutline, "slug" | "title" | "icon"> }) {
@@ -14,14 +18,28 @@ export function CourseBrand({ course }: { course: Pick<CourseOutline, "slug" | "
   );
 }
 
-export function Sidebar({ course, track }: { course: CourseOutline; track: string }) {
-  const outline = buildOutline({ modules: course.modules, syllabus: course.syllabus, lessons: course.lessons }, track);
+/** Chip text for a locked day, e.g. "tomorrow" or "Mon 5 Oct". */
+export function lockChip(learner: LearnerView, day: number) {
+  return learner.unlock ? relativeDay(unlocksOn(learner.unlock, day), learner.today).replace(/^on /, "") : undefined;
+}
+
+export function Sidebar({ course, learner }: { course: CourseOutline; learner: LearnerView }) {
+  const outline = buildOutline(course, learner.track, (d, p) => (p ? learner.access(d) : "upcoming"));
   const base = `/learn/${course.slug}`;
 
   return (
     <Drawer brand={<CourseBrand course={course} />}>
       <CourseBrand course={course} />
-      <TrackToggle slug={course.slug} tracks={course.tracks} current={track} />
+      <TrackToggle slug={course.slug} tracks={course.tracks} current={learner.track} />
+      {learner.viewer ? (
+        <NavLink className="nav-home" href="/dashboard">
+          Dashboard
+        </NavLink>
+      ) : (
+        <NavLink className="nav-home" href={`/signin?callbackUrl=${encodeURIComponent(`/courses/${course.slug}`)}`}>
+          Sign in
+        </NavLink>
+      )}
       <NavLink className="nav-home" href={`/courses/${course.slug}`}>
         Course overview
       </NavLink>
@@ -35,21 +53,11 @@ export function Sidebar({ course, track }: { course: CourseOutline; track: strin
               {m.published}/{m.days.length}
             </span>
           </div>
-          {m.days.map((d) =>
-            d.state === "published" ? (
-              <NavLink key={d.day} className="day" href={`${base}/day/${pad(d.day)}`}>
-                <span className="n">{pad(d.day)}</span>
-                <span>{d.title}</span>
-              </NavLink>
-            ) : (
-              <span key={d.day} className="day locked" aria-disabled="true" title="Not published yet">
-                <span className="n">{pad(d.day)}</span>
-                <span>{d.title}</span>
-              </span>
-            ),
-          )}
+          {m.days.map((d) => (
+            <DayRow key={d.day} slug={course.slug} day={d} chip={lockChip(learner, d.day)} nav />
+          ))}
           {m.hasTest && (
-            <NavLink className="mtest" href={`${base}/module/${m.number}`}>
+            <NavLink className={learner.moduleAccess(course.modules.find((x) => x.number === m.number)!) === "open" ? "mtest" : "mtest locked"} href={`${base}/module/${m.number}`}>
               <span className="n">★</span>
               <span>Module {m.number} test</span>
               <span className="chip new">test</span>

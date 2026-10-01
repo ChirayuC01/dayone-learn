@@ -69,11 +69,16 @@ describe("buildOutline", () => {
     const out = buildOutline(input, "wsl");
     expect(out.map((m) => m.number)).toEqual([1, 2]);
     expect(out[0]!.days).toEqual([
-      { day: 1, title: "Published one", state: "published" },
-      { day: 2, title: "Planned two", state: "upcoming" },
+      { day: 1, title: "Published one", access: "open" },
+      { day: 2, title: "Planned two", access: "upcoming" },
     ]);
     expect(out[0]).toMatchObject({ published: 1, hasTest: true });
     expect(out[1]).toMatchObject({ published: 0, hasTest: false });
+  });
+
+  it("takes per-day access from the caller", () => {
+    const out = buildOutline(input, "wsl", (d, p) => (!p ? "upcoming" : d === 1 ? "preview" : "enroll"));
+    expect(out[0]!.days.map((d) => d.access)).toEqual(["preview", "upcoming"]);
   });
 
   it("uses the track title for published days", () => {

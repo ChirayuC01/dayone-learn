@@ -96,9 +96,11 @@ model User {
   image         String?
   role          Role      @default(USER)
 
-  displayName String? @unique
-  avatarSeed  String  @default(cuid())
-  timezone    String  @default("Asia/Kolkata") // IANA zone
+  displayName       String? @unique
+  avatarSeed        String  @default(cuid())
+  timezone          String  @default("Asia/Kolkata") // IANA zone
+  // false until the browser reports its zone once after first sign-in; later changes go through settings
+  timezoneConfirmed Boolean @default(false)
 
   // settings
   profilePublic     Boolean    @default(false)

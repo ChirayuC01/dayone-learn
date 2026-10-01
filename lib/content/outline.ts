@@ -1,5 +1,6 @@
 // Pure helpers for presenting a course: titles, tracks, syllabus states and paging.
 import type { TrackDef } from "../ingest/normalize.ts";
+import type { DayAccess } from "../learning/access.ts";
 
 export const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -35,15 +36,13 @@ export function readingMinutes(markdown: string): number {
 
 // ───────────── Syllabus outline ─────────────
 
-export type DayState = "published" | "upcoming";
-
 export type OutlineInput = {
   modules: { number: number; title: string; dayFrom: number; dayTo: number; testQuestions: number }[];
   syllabus: { day: number; moduleNumber: number; title: string }[];
   lessons: { day: number; title: string; trackTitles: unknown }[];
 };
 
-export type OutlineDay = { day: number; title: string; state: DayState };
+export type OutlineDay = { day: number; title: string; access: DayAccess };
 export type OutlineModule = {
   number: number;
   title: string;
@@ -54,7 +53,12 @@ export type OutlineModule = {
   hasTest: boolean;
 };
 
-export function buildOutline(input: OutlineInput, track: string): OutlineModule[] {
+/** `access` decides each day's state; by default every published day is open (no enrollment rules). */
+export function buildOutline(
+  input: OutlineInput,
+  track: string,
+  access: (day: number, published: boolean) => DayAccess = (_d, p) => (p ? "open" : "upcoming"),
+): OutlineModule[] {
   const lessons = new Map(input.lessons.map((l) => [l.day, l]));
   return [...input.modules]
     .sort((a, b) => a.number - b.number)
@@ -64,7 +68,7 @@ export function buildOutline(input: OutlineInput, track: string): OutlineModule[
         .sort((a, b) => a.day - b.day)
         .map((d): OutlineDay => {
           const l = lessons.get(d.day);
-          return l ? { day: d.day, title: lessonTitle(l, track), state: "published" } : { day: d.day, title: d.title, state: "upcoming" };
+          return { day: d.day, title: l ? lessonTitle(l, track) : d.title, access: access(d.day, Boolean(l)) };
         });
       return {
         number: m.number,
@@ -72,7 +76,7 @@ export function buildOutline(input: OutlineInput, track: string): OutlineModule[
         dayFrom: m.dayFrom,
         dayTo: m.dayTo,
         days,
-        published: days.filter((d) => d.state === "published").length,
+        published: days.filter((d) => d.access !== "upcoming").length,
         hasTest: m.testQuestions > 0,
       };
     });

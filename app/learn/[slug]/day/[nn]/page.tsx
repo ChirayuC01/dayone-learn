@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { LockedLesson } from "@/components/learn/LockedLesson";
 import { Markdown } from "@/components/Markdown";
 import { lessonMarkdown, lessonTitle, neighbours, pad, parseDayParam, readingMinutes } from "@/lib/content/outline";
 import { getCourseOutline, getLesson } from "@/lib/content/queries";
-import { currentTrack } from "@/lib/content/track";
+import { db } from "@/lib/db";
+import { canRead } from "@/lib/learning/access";
+import { describeNextUnlock } from "@/lib/learning/format";
+import { learnerView } from "@/lib/learning/learner";
 
 type Params = { params: Promise<{ slug: string; nn: string }> };
 
@@ -24,11 +28,14 @@ export default async function LessonPage({ params }: Params) {
   if (!course || !day || day > course.totalDays) notFound();
   if (nn !== pad(day)) redirect(`/learn/${slug}/day/${pad(day)}`);
 
-  const track = await currentTrack(course);
+  const learner = await learnerView(course);
+  const { track } = learner;
+  const access = learner.access(day);
   const planned = course.syllabus.find((s) => s.day === day);
   const mod = course.modules.find((m) => m.number === planned?.moduleNumber);
   const trackLabel = course.tracks.find((t) => t.key === track)?.label;
-  const lesson = await getLesson(course.id, day);
+  const summary = course.lessons.find((l) => l.day === day);
+  const base = `/learn/${slug}`;
 
   const eyebrow = (minutes?: number) => (
     <div className="eyebrow">
@@ -45,7 +52,7 @@ export default async function LessonPage({ params }: Params) {
     </div>
   );
 
-  if (!lesson) {
+  if (access === "upcoming") {
     return (
       <>
         {eyebrow()}
@@ -55,18 +62,32 @@ export default async function LessonPage({ params }: Params) {
     );
   }
 
+  if (!canRead(access)) {
+    return (
+      <>
+        {eyebrow()}
+        <h1 className="h1">{summary ? lessonTitle(summary, track) : planned?.title}</h1>
+        <LockedLesson slug={slug} day={day} learner={learner} />
+      </>
+    );
+  }
+
+  const lesson = await getLesson(course.id, day);
+  if (!lesson) notFound();
+  if (learner.active && learner.active.currentDay !== day) {
+    await db.enrollment.update({ where: { id: learner.active.id }, data: { currentDay: day } });
+  }
+
   const md = lessonMarkdown(lesson.content, track, course.defaultTrack);
   const questions = lesson.questionCount(track);
-  const { prev, next } = neighbours(
-    course.lessons.map((l) => l.day),
-    day,
-  );
+  // The pager only links days this viewer can open.
+  const readable = course.lessons.map((l) => l.day).filter((d) => canRead(learner.access(d)));
+  const { prev, next } = neighbours(readable, day);
   const titleOf = (d: number) => {
     const l = course.lessons.find((x) => x.day === d);
     return l ? lessonTitle(l, track) : "";
   };
-  const isReviewDay = mod?.dayTo === day && mod.testQuestions > 0;
-  const base = `/learn/${slug}`;
+  const isReviewDay = mod?.dayTo === day && mod.testQuestions > 0 && learner.moduleAccess(mod) === "open";
 
   return (
     <>
@@ -84,7 +105,19 @@ export default async function LessonPage({ params }: Params) {
           </p>
         </div>
         <div className="quiz-f">
-          <span className="note">Sign in to take the quiz and save your score.</span>
+          {learner.active ? (
+            <span className="note">Quizzes arrive in the next update.</span>
+          ) : (
+            <>
+              <span className="note">Enroll to take the quiz and save your score.</span>
+              <Link
+                className="btn"
+                href={learner.viewer ? `/courses/${slug}#enroll` : `/signin?callbackUrl=${encodeURIComponent(`/courses/${slug}`)}`}
+              >
+                {learner.viewer ? "Enroll" : "Sign in to enroll"}
+              </Link>
+            </>
+          )}
         </div>
       </section>
 
@@ -117,6 +150,11 @@ export default async function LessonPage({ params }: Params) {
           </Link>
         )}
       </nav>
+      {learner.next && learner.next.kind !== "complete" && !next && (
+        <p className="note" style={{ textAlign: "right" }}>
+          {describeNextUnlock(learner.next, learner.today, learner.tz)}
+        </p>
+      )}
     </>
   );
 }

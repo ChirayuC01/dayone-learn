@@ -6,7 +6,8 @@ import { resolveTrack } from "./outline";
 
 export const trackCookieName = (slug: string) => `track.${slug}`;
 
-export async function currentTrack(course: { slug: string; tracks: TrackDef[]; defaultTrack: string }) {
+/** The anonymous / not-enrolled reader's track. Enrolled learners use Enrollment.track (see learnerView). */
+export async function cookieTrack(course: { slug: string; tracks: TrackDef[]; defaultTrack: string }) {
   const jar = await cookies();
   return resolveTrack(course.tracks, course.defaultTrack, jar.get(trackCookieName(course.slug))?.value);
 }
