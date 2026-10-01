@@ -15,6 +15,11 @@ import type { AppendInput, CourseInput, LessonInput, ModuleTestInput } from "./s
 type Tx = Prisma.TransactionClient;
 type IngestKind = "COURSE" | "LESSON" | "APPEND" | "MODULE";
 
+// Ingest runs ~10–80 sequential queries per transaction. Prisma's 5 s default is too tight on a
+// remote or slow database (e.g. Windows dev against Docker or Azure), and an expired transaction
+// fails with P2028. These are idempotent background writes, so a long limit is safe.
+const TX_OPTIONS = { maxWait: 15_000, timeout: 60_000 };
+
 /** Runs an ingest operation and writes an IngestLog row whether it succeeds or fails. */
 export async function withIngestLog<T extends { message: string }>(
   db: PrismaClient,
@@ -130,7 +135,7 @@ export async function upsertCourse(db: PrismaClient, slug: string, input: Course
       created: !existing,
       message: `${existing ? "updated" : "created"} course ${slug}: ${plan.modules.length} modules, ${plan.days.length} days`,
     };
-  }, { timeout: 30_000 });
+  }, TX_OPTIONS);
 }
 
 // ───────────── PUT /courses/[slug]/lessons/[day] ─────────────
@@ -164,7 +169,7 @@ export async function upsertLesson(db: PrismaClient, slug: string, day: number, 
         `${existing ? "updated" : "published"} ${slug} day ${day}: ${Object.keys(input.content).join("+")}, ` +
         `${questions.length} questions${removed ? ` (${removed} removed)` : ""}`,
     };
-  });
+  }, TX_OPTIONS);
 }
 
 // ───────────── PATCH /courses/[slug]/lessons/[day]/append ─────────────
@@ -177,7 +182,7 @@ export async function appendToLesson(db: PrismaClient, slug: string, day: number
     const content = appendSections(lesson.content as Record<string, string>, input.section, course.trackKeys);
     await tx.lesson.update({ where: { id: lesson.id }, data: { content } });
     return { lessonId: lesson.id, message: `appended to ${slug} day ${day}: ${Object.keys(input.section).join("+")}` };
-  });
+  }, TX_OPTIONS);
 }
 
 // ───────────── PUT /courses/[slug]/modules/[n] ─────────────
@@ -198,5 +203,5 @@ export async function upsertModuleTest(db: PrismaClient, slug: string, n: number
       moduleId: mod.id,
       message: `module ${n} test for ${slug}: ${questions.length} questions${removed ? ` (${removed} removed)` : ""}`,
     };
-  });
+  }, TX_OPTIONS);
 }
