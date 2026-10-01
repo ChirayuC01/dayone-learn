@@ -493,3 +493,13 @@ model IngestLog {
 
   @@index([courseSlug, createdAt])
 }
+
+/// Fixed-window rate limiting shared by every app instance: one row per key per window.
+model RateLimit {
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+}

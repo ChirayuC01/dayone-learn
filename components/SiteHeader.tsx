@@ -24,6 +24,7 @@ export async function SiteHeader() {
               {viewer.displayName && <Link href={`/profile/${viewer.displayName}`}>Profile</Link>}
               <Link href="/leaderboard">Leaderboard</Link>
               <Link href="/settings">Settings</Link>
+              {viewer.role === "ADMIN" && <Link href="/admin">Admin</Link>}
               <form action={signOutAction}>
                 <button type="submit" className="navbtn">
                   Sign out

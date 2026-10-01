@@ -7,7 +7,7 @@ import { sendWeeklySummaries } from "@/lib/notify/service";
 
 // Run every Monday 00:00 IST (Sunday 18:30 UTC). Safe to run again: finished weeks and placed users are skipped.
 export async function POST(req: Request) {
-  const denied = denyUnlessCron(req);
+  const denied = await denyUnlessCron(req);
   if (denied) return denied;
   const league = await runLeagueWeek(db);
   const summaries = await sendWeeklySummaries(db, addDays(league.weekStart, -7));

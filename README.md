@@ -42,7 +42,7 @@ GitHub and Google buttons appear only when their env vars are set. Sessions are 
 ```
 app/                  Next.js routes (React Server Components by default)
 lib/                  business rules as pure, unit-tested functions, plus DB services
-  ingest/             schema.ts (Zod) · normalize.ts (pure rules) · service.ts (transactional upserts)
+  ingest/             schema.ts (Zod) · normalize.ts (pure rules) · service.ts (transactional upserts) · http.ts (route plumbing)
   content/            outline.ts (titles, tracks, syllabus states) · theme.ts (per-course accent) · queries.ts
   markdown/           remark-details.ts (the only raw HTML allowed in lessons: <details>/<summary>)
   time/               zoned.ts: calendar dates in IANA zones (DST-safe), wall-clock ↔ instant
@@ -53,6 +53,7 @@ lib/                  business rules as pure, unit-tested functions, plus DB ser
   review/             leitner.ts (boxes, due dates, session picking; pure) · service.ts (queue + sessions)
   league/             league.ts (weeks, cohorts, zones; pure) · service.ts (finalise, place, standings, all-time board)
   notify/             reminders.ts + unsubscribe.ts (pure) · emails.ts (templates) · service.ts (send reminders/summaries)
+  ratelimit/          limit.ts: Postgres fixed-window rate limiter shared by all instances
   users/              display names
 auth.ts               Auth.js v5 config (Prisma adapter, database sessions)
 components/           Markdown renderer, reader sidebar/drawer, track toggle, cards
@@ -84,6 +85,8 @@ Code under `lib/` that scripts import uses relative imports with explicit `.ts` 
 | `/unsubscribe` | One-click email unsubscribe from a signed link (with a confirm button) |
 | `POST /api/cron/weekly-league` | Monday job: finalise last week, place this week, send weekly summaries |
 | `POST /api/cron/reminders` | Hourly job: streak reminder emails |
+| `/api/ingest/…` | Content ingest API for the scheduled Claude jobs (see [docs/INGEST.md](docs/INGEST.md)) |
+| `/admin` | ADMIN only: course status, ingest log, lesson previews per track, re-publish a day, hide questions |
 
 Lesson Markdown is rendered on the server with GFM and `rehype-sanitize`. ` ```bash ` blocks get a `$` prompt per command line and a copy button, ` ```output ` blocks a dashed box, and any other fence a diagram box. Raw HTML is dropped except `<details>`/`<summary>`. An enrolled learner's track is stored on their enrollment; everyone else's in a per-course cookie.
 
@@ -157,6 +160,23 @@ Windows PowerShell strips the double quotes Prisma's table names need when it pa
 ```powershell
 'update "ReviewItem" set "dueAt" = now();' | npx prisma db execute --stdin --schema prisma/schema.prisma
 ```
+
+## Content ingest and admin
+
+- The ingest API (`PUT /api/ingest/courses/{slug}`, `…/lessons/{day}`, `PATCH …/lessons/{day}/append`, `PUT …/modules/{n}`, `GET /api/ingest/health`) is documented with curl examples in [docs/INGEST.md](docs/INGEST.md). Every call needs `Authorization: Bearer $INGEST_TOKEN`, is validated with Zod, runs in a transaction, is idempotent and is written to the ingest log.
+- `/admin` is for users with the ADMIN role (emails in `ADMIN_EMAILS`); everyone else gets a 404. It lists courses with a DRAFT / LIVE / ARCHIVED switch, the ingest log (filter by course and status), and per course every published day with previews per track (DRAFT courses too), each quiz with its answers and a hide / show switch per question, and a **Re-publish** button that resets a day's publish time to now and logs it.
+
+## Rate limits
+
+Shared by every app instance through the `RateLimit` table (one atomic upsert per request; old windows are pruned by the hourly cron).
+
+| What | Limit |
+|---|---|
+| Ingest API | 120 / minute |
+| Email sign-in links | 5 per address and 20 per IP / 15 minutes |
+| Quiz and module test submissions | 6 per user / minute |
+| Reading heartbeats | 40 per user / minute |
+| Cron routes | 30 per route / minute |
 
 ## Seed data format
 

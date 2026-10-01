@@ -1,10 +1,12 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { db } from "@/lib/db";
+import { clientIp, hit, RULES } from "@/lib/ratelimit/limit";
 import { getViewer } from "@/lib/learning/learner";
 import { isValidTimeZone } from "@/lib/time/zoned";
 
@@ -22,6 +24,10 @@ export async function signInWithEmail(formData: FormData) {
   const email = z.email().max(254).safeParse(String(formData.get("email") ?? "").trim().toLowerCase());
   const callbackUrl = safeCallback(formData.get("callbackUrl"));
   if (!email.success) redirect(`/signin?error=InvalidEmail&callbackUrl=${encodeURIComponent(callbackUrl)}`);
+  // Stops the form being used to flood an inbox: per address and per client IP.
+  const ip = clientIp(await headers());
+  const [byEmail, byIp] = await Promise.all([hit(db, `signin:email:${email.data}`, RULES.emailSignIn), hit(db, `signin:ip:${ip}`, RULES.emailSignInIp)]);
+  if (!byEmail.allowed || !byIp.allowed) redirect(`/signin?error=TooManyRequests&callbackUrl=${encodeURIComponent(callbackUrl)}`);
   try {
     await signIn("resend", { email: email.data, redirectTo: callbackUrl, redirect: false });
   } catch (err) {

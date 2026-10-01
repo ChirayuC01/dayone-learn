@@ -8,6 +8,7 @@ export const metadata: Metadata = { title: "Sign in" };
 
 const ERRORS: Record<string, string> = {
   InvalidEmail: "That doesn't look like an email address.",
+  TooManyRequests: "Too many sign-in emails requested. Wait 15 minutes and try again.",
   OAuthAccountNotLinked: "That email is already linked to another sign-in method. Use the one you signed up with.",
   Verification: "That sign-in link has expired or was already used. Ask for a new one.",
   AccessDenied: "Sign-in was cancelled.",
