@@ -1,0 +1,149 @@
+{
+  "module": 1,
+  "title": "Getting Started",
+  "quiz": [
+    {
+      "type": "mcq",
+      "q": "Ubuntu and Fedora are best described as…",
+      "options": [
+        "Different kernels",
+        "Different distributions on the same Linux kernel family",
+        "Windows apps",
+        "Shells"
+      ],
+      "answer": 1,
+      "explain": "Same kernel family, different packaging and defaults."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that prints the kernel release.",
+      "accept": [
+        "uname -r"
+      ],
+      "explain": "`uname -r`."
+    },
+    {
+      "type": "mcq",
+      "q": "In `dev@vm:/tmp$`, what does `$` tell you?",
+      "options": [
+        "You're root",
+        "You're a normal user",
+        "A command is running",
+        "You're in your home folder"
+      ],
+      "answer": 1,
+      "explain": "`$` = normal user, `#` = root."
+    },
+    {
+      "type": "mcq",
+      "q": "Which is NOT a valid way to get help about `ls`'s options?",
+      "options": [
+        "ls --help",
+        "man ls",
+        "help ls",
+        "whatis ls (one-line)"
+      ],
+      "answer": 2,
+      "explain": "`help` is for bash built-ins like cd. ls is a program."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that lists every file in the current folder, hidden ones included, in long format.",
+      "accept": [
+        "ls -la",
+        "ls -al",
+        "ls -l -a",
+        "ls -a -l",
+        "ls -l --all",
+        "ls --all -l"
+      ],
+      "explain": "`-l` long format + `-a` all."
+    },
+    {
+      "type": "mcq",
+      "q": "You're in `/home/dev`. Which path reaches `/home/dev/projects/webapp` from anywhere?",
+      "options": [
+        "projects/webapp",
+        "./projects/webapp",
+        "~/projects/webapp",
+        "../projects/webapp"
+      ],
+      "answer": 2,
+      "explain": "`~/...` expands to your home, so it works from anywhere. The others are relative."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the shortest command that takes you to your home folder.",
+      "accept": [
+        "cd"
+      ],
+      "explain": "Plain `cd` goes home (so does `cd ~`)."
+    },
+    {
+      "type": "mcq",
+      "q": "Where are system-wide config files kept?",
+      "options": [
+        "/usr",
+        "/etc",
+        "/var",
+        "/root"
+      ],
+      "answer": 1,
+      "explain": "`/etc` holds plain text config."
+    },
+    {
+      "type": "mcq",
+      "q": "Where does the `ls` program itself live?",
+      "options": [
+        "/etc/ls",
+        "/usr/bin/ls",
+        "/home/bin/ls",
+        "It's built into bash"
+      ],
+      "answer": 1,
+      "explain": "`ls -l /usr/bin/ls` shows it. `cd`, unlike ls, is built into bash."
+    },
+    {
+      "type": "mcq",
+      "q": "`ls /root` says \"Permission denied\". What does that mean?",
+      "options": [
+        "The system is broken",
+        "You're not the admin; /root is the admin's home",
+        "/root doesn't exist",
+        "You typed it in the wrong case"
+      ],
+      "answer": 1,
+      "explain": "Normal users own only their own home; that's expected."
+    },
+    {
+      "type": "mcq",
+      "q": "You paste `cd C:\\Users\\me`. What's the WSL equivalent?",
+      "options": [
+        "cd /c/Users/me",
+        "cd /mnt/c/Users/me",
+        "cd C:/Users/me",
+        "cd ~/Users/me"
+      ],
+      "answer": 1,
+      "explain": "Windows drives live under /mnt, with forward slashes.",
+      "tracks": [
+        "wsl"
+      ]
+    },
+    {
+      "type": "mcq",
+      "q": "You plugged in a USB stick on Ubuntu desktop. Where do its files most likely appear?",
+      "options": [
+        "/dev/sdb",
+        "/media/<you>/<drive>",
+        "/mnt/c",
+        "/usb"
+      ],
+      "answer": 1,
+      "explain": "Desktop distros mount removable drives under /media (or /run/media on Fedora/Arch). /dev/sdb is the raw device.",
+      "tracks": [
+        "linux"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "day": 5,
+  "module": 1,
+  "title": "Filesystem layout",
+  "content": {
+    "wsl": "## Yesterday in 30 seconds\n`pwd` shows where you are, `ls PATH` looks somewhere without moving, and `cd PATH` moves you. Absolute paths start with `/` and work from anywhere; relative paths are read from where you stand. Shortcuts: `.` here, `..` up, `~` home, `cd -` back.\n\n## Why this matters\nWhen a tutorial says \"edit the config\", \"check the logs\" or \"it's installed in /usr/bin\", it assumes you know this map. Knowing where things live lets you find a config file, a log or a program without guessing, and in WSL it decides whether your project runs fast or slow.\n\n## The concept\nOn Windows, each drive has its own tree (`C:\\`, `D:\\`). Linux has **one single tree** starting at `/`, and every folder has a fixed job. The layout is almost the same on every Linux system (it follows the *Filesystem Hierarchy Standard*), so once you learn it here, it works on any server you ever SSH into.\n\nThink of it like a well-organised office building: every floor has a purpose, and you don't store the coffee machine in the server room.\n\n| Folder | What lives there | Rough Windows equivalent |\n|---|---|---|\n| `/` | The root. The top of the whole tree. | `C:\\` (but for everything) |\n| `/home` | One folder per user. Yours is `/home/<you>`, also written `~`. Your projects go here. | `C:\\Users` |\n| `/root` | Home folder of the admin user *root*. Not the same as `/`. | The Administrator's profile |\n| `/etc` | System-wide configuration: plain text settings files. | Registry + settings files |\n| `/var` | *Variable* data that grows and changes: logs (`/var/log`), caches, databases. | `C:\\ProgramData`, log folders |\n| `/usr` | Installed programs and their files. Commands live in `/usr/bin`. | `C:\\Program Files` |\n| `/tmp` | Scratch space anyone can write to. Can be cleaned automatically. | `%TEMP%` |\n| `/mnt` | Where other drives are attached (*mounted*). In WSL, `/mnt/c` is your Windows C: drive. | Drive letters |\n\nA few others you'll see: `/bin` and `/sbin` are shortcuts to `/usr/bin` and `/usr/sbin` on modern Ubuntu, `/opt` holds some third-party software, and `/proc`, `/sys` and `/dev` are special \"virtual\" folders the kernel fills in (you don't store things there).\n\n## Commands\nRun on Ubuntu 24.04 as a normal user `dev`. Only `/mnt/c` couldn't be run on the test machine, because it isn't WSL.\n\n### 1. See the whole top level: ls -F /\n```bash\nls -F /\n```\n```output\nbin@\nbin.usr-is-merged/\nboot/\ndev/\netc/\nhome/\nlib@\nlib.usr-is-merged/\nlib64@\nlost+found/\nmedia/\nmnt/\nopt/\nproc/\nroot/\nrun/\nsbin@\nsbin.usr-is-merged/\nsrv/\nsys/\ntmp/\nusr/\nvar/\n```\n- `/` is the path, so this lists the root without moving you. `-F` marks folders with `/`.\n- Names ending in `@` (`bin@`, `lib@`) are **shortcuts** (symbolic links) to folders inside `/usr`. Links are Day 45.\n- In WSL you'll likely also see `init` and `snap`. Don't worry about exact matches; look for the big ones in the table.\n\n### 2. Homes: ls /home and ls /root\n```bash\nls /home\n```\n```output\nclaude\ndev\nubuntu\n```\nOn your WSL you'll probably see just one folder: your username. Now try the admin's home:\n\n```bash\nls /root\n```\n```output\nls: cannot open directory '/root': Permission denied\n```\n- That's normal. Only the admin can look inside `/root`. Normal users own their own folder in `/home` and nothing else. Permissions are Module 3.\n\n### 3. Configuration lives in /etc: cat /etc/os-release\n`cat` prints a file's contents to the screen (Day 10 covers it properly). This file says which Linux you're running:\n\n```bash\ncat /etc/os-release\n```\n```output\nPRETTY_NAME=\"Ubuntu 24.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.4 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\n...\n```\n- Config in Linux is mostly **plain text files** like this, in `/etc`. Examples: `/etc/hostname` (the machine's name), `/etc/hosts` (Day 57), `/etc/nginx/` if you install nginx.\n- You can *read* most of `/etc`, but changing it needs admin rights: `touch /etc/test` as a normal user gives `touch: cannot touch '/etc/test': Permission denied`.\n\n### 4. Logs live in /var/log: ls /var/log\n```bash\nls /var/log\n```\n```output\nREADME\nalternatives.log\napt\nbootstrap.log\nbtmp\ndpkg.log\nfaillog\nfontconfig.log\njournal\nlastlog\npostgresql\nprivate\nredis\nwtmp\n```\n- `dpkg.log` and `apt/` record software installs. `postgresql` and `redis` appeared because those are installed on the test machine: installed services put their logs here. Yours will differ. Reading logs is Day 39.\n\n### 5. Programs live in /usr/bin: ls -l /usr/bin/ls\nEven `ls` itself is just a file:\n\n```bash\nls -l /usr/bin/ls\n```\n```output\n-rwxr-xr-x 1 root root 142312 Jan 23  2026 /usr/bin/ls\n```\n- `-l` gives the long format. The `x` letters mean it's executable (a program); `root root` means the admin owns it. You'll decode every column on Day 16.\n- When you type `ls`, the shell finds this file in `/usr/bin` and runs it (how it knows where to look is Day 41 and Day 44).\n\n### 6. Your Windows drive: /mnt/c (WSL only)\n```bash\nls /mnt/c/Users\n```\n- In WSL this lists the folders in your Windows `C:\\Users`, including your Windows username. So your Windows Desktop is at `/mnt/c/Users/<WindowsName>/Desktop`. Other drives follow the same pattern: `D:` is `/mnt/d`.\n- Going the other way, from inside WSL you can run `explorer.exe .` to open the current Linux folder in Windows File Explorer. It shows up under a path like `\\\\wsl.localhost\\Ubuntu\\home\\<you>`.\n\n## Try it now (in WSL)\n1. Run `ls -F /` and match at least five names to the table above. Which entries end in `@`?\n2. Run `cat /etc/os-release` and find your exact Ubuntu version. Then run `cat /etc/hostname` to see your machine's name.\n3. Run `ls /var/log`, then `ls /usr/bin`. That second list is long: every command you'll learn lives there. Look for `ls`, `cd` (not there — it's built into bash), and `python3`.\n4. Run `cd /mnt/c/Users` then `ls`. Find your Windows username, `cd` into it, and `ls Desktop`. Then `cd ~` to get back home.\n5. From your home folder run `explorer.exe .` and look at the path in File Explorer's address bar. This is the safe way to see your Linux files from Windows.\n\n## Common mistakes\n- **Keeping your projects on /mnt/c.** It works, but every file access crosses from Linux to Windows, so `git status`, `npm install` and builds are much slower. Files there also all look like `rwxrwxrwx` in `ls -l`, and Windows editors may add CRLF line endings that break shell scripts. Keep code in `~/projects` and open it from Windows with `explorer.exe .` or VS Code's WSL extension.\n- **Editing Linux files through Windows' hidden AppData folder.** WSL's disk lives in a file somewhere under `C:\\Users\\<you>\\AppData\\Local\\...`. Don't go digging there; changing Linux files that way can corrupt them. Use `\\\\wsl.localhost\\Ubuntu\\...` (what `explorer.exe .` opens) instead.\n- **Mixing up `/`, `/root` and `~`.** `/` is the top of everything, `/root` is the admin's home, and `~` is *your* home (`/home/<you>`). \"Permission denied\" in `/root` or when writing to `/etc` doesn't mean something is broken; you just aren't the admin. `sudo` is Day 15.\n- **Saving important work in `/tmp`.** It's scratch space and may be emptied automatically. Anything you want to keep goes in `~`.\n\n## Cheat sheet\n| Path / command | What it's for |\n|---|---|\n| `/` | Root: the top of the single tree |\n| `/home/<you>` = `~` | Your files and projects |\n| `/root` | Admin's home (not `/`) |\n| `/etc` | System config (text files) |\n| `/var/log` | Log files |\n| `/usr/bin` | Installed commands and programs |\n| `/tmp` | Temporary scratch files |\n| `/mnt/c` | Windows C: drive (WSL) |\n| `ls -F /` | See the top level, folders marked / |\n| `cat /etc/os-release` | Which Linux version you're on |\n| `explorer.exe .` | Open the current folder in Windows Explorer (WSL) |\n",
+    "linux": "## Yesterday in 30 seconds\n`pwd` shows where you are, `ls PATH` looks somewhere without moving, and `cd PATH` moves you. Absolute paths start with `/` and work from anywhere; relative paths are read from where you stand. Shortcuts: `.` here, `..` up, `~` home, `cd -` back.\n\n## Why this matters\nWhen a tutorial says \"edit the config\", \"check the logs\" or \"it's installed in /usr/bin\", it assumes you know this map. Knowing where things live lets you find a config file, a log or a program without guessing, on your own machine or on any server you SSH into.\n\n## The concept\nLinux has **one single tree** starting at `/`, and every folder has a fixed job. Extra disks and USB sticks don't get their own letter; they are attached (*mounted*) as a folder somewhere in the tree. The layout follows the *Filesystem Hierarchy Standard*, so it's almost the same on Ubuntu, Fedora, Arch and nearly every server.\n\nThink of it like a well-organised office building: every floor has a purpose, and you don't store the coffee machine in the server room.\n\n| Folder | What lives there |\n|---|---|\n| `/` | The root. The top of the whole tree. |\n| `/home` | One folder per user. Yours is `/home/<you>`, also written `~`. Your projects go here. |\n| `/root` | Home folder of the admin user *root*. Not the same as `/`. |\n| `/etc` | System-wide configuration: plain text settings files. |\n| `/var` | *Variable* data that grows and changes: logs (`/var/log`), caches, databases. |\n| `/usr` | Installed programs and their files. Commands live in `/usr/bin`. |\n| `/tmp` | Scratch space anyone can write to. Often emptied on reboot. |\n| `/media` | Where removable drives appear automatically on desktop distros, usually `/media/<you>/<drive>` or `/run/media/<you>/<drive>`. |\n| `/mnt` | An empty spot for mounting drives by hand, usually by an admin. |\n| `/dev` | Devices as files: disks show up as `/dev/sda`, `/dev/nvme0n1`, etc. |\n\nA few others you'll see: `/bin` and `/sbin` are shortcuts to `/usr/bin` and `/usr/sbin` on modern Ubuntu, Fedora, Debian and Arch; `/opt` holds some third-party software; `/boot` holds the kernel and boot files; and `/proc` and `/sys` are special \"virtual\" folders the kernel fills in (you don't store things there).\n\n## Commands\nRun on Ubuntu 24.04 as a normal user `dev`. Other distros give very similar output.\n\n### 1. See the whole top level: ls -F /\n```bash\nls -F /\n```\n```output\nbin@\nbin.usr-is-merged/\nboot/\ndev/\netc/\nhome/\nlib@\nlib.usr-is-merged/\nlib64@\nlost+found/\nmedia/\nmnt/\nopt/\nproc/\nroot/\nrun/\nsbin@\nsbin.usr-is-merged/\nsrv/\nsys/\ntmp/\nusr/\nvar/\n```\n- `/` is the path, so this lists the root without moving you. `-F` marks folders with `/`.\n- Names ending in `@` (`bin@`, `lib@`) are **shortcuts** (symbolic links) to folders inside `/usr`. Links are Day 45.\n- The `*.usr-is-merged` folders are an Ubuntu detail; Fedora and Arch don't have them. Don't worry about exact matches; look for the big ones in the table.\n\n### 2. Homes: ls /home and ls /root\n```bash\nls /home\n```\n```output\nclaude\ndev\nubuntu\n```\nOn your machine you'll probably see just one folder: your username. Now try the admin's home:\n\n```bash\nls /root\n```\n```output\nls: cannot open directory '/root': Permission denied\n```\n- That's normal. Only the admin can look inside `/root`. Normal users own their own folder in `/home` and nothing else. Permissions are Module 3.\n\n### 3. Configuration lives in /etc: cat /etc/os-release\n`cat` prints a file's contents to the screen (Day 10 covers it properly). This file says which Linux you're running:\n\n```bash\ncat /etc/os-release\n```\n```output\nPRETTY_NAME=\"Ubuntu 24.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.4 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\n...\n```\n- Config in Linux is mostly **plain text files** like this, in `/etc`. Examples: `/etc/hostname` (the machine's name), `/etc/hosts` (Day 57), `/etc/nginx/` if you install nginx.\n- You can *read* most of `/etc`, but changing it needs admin rights: `touch /etc/test` as a normal user gives `touch: cannot touch '/etc/test': Permission denied`.\n\n### 4. Logs live in /var/log: ls /var/log\n```bash\nls /var/log\n```\n```output\nREADME\nalternatives.log\napt\nbootstrap.log\nbtmp\ndpkg.log\nfaillog\nfontconfig.log\njournal\nlastlog\npostgresql\nprivate\nredis\nwtmp\n```\n- `dpkg.log` and `apt/` record software installs on Debian/Ubuntu. On Fedora you'd see `dnf`-style logs; on Arch, `pacman.log`.\n- `postgresql` and `redis` appeared because those are installed on the test machine: installed services put their logs here.\n- `journal/` holds the system journal. Fedora and Arch keep most system logs there instead of in text files, so their `/var/log` looks emptier. Reading logs (including `journalctl`) is Day 39.\n\n### 5. Programs live in /usr/bin: ls -l /usr/bin/ls\nEven `ls` itself is just a file:\n\n```bash\nls -l /usr/bin/ls\n```\n```output\n-rwxr-xr-x 1 root root 142312 Jan 23  2026 /usr/bin/ls\n```\n- `-l` gives the long format. The `x` letters mean it's executable (a program); `root root` means the admin owns it. You'll decode every column on Day 16.\n- When you type `ls`, the shell finds this file in `/usr/bin` and runs it (how it knows where to look is Day 41 and Day 44).\n\n### 6. Where drives appear: lsblk and /media\n`lsblk` (**l**i**s**t **bl**oc**k** devices) shows your disks and where each one is attached in the tree:\n\n```bash\nlsblk\n```\n```output\nNAME  MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS\nvda   254:0    0  256G  0 disk /\nvdb   254:16   0  9.6M  1 disk /opt/rclone\n...\n```\n- The test machine is a virtual machine, so its disks are called `vda`, `vdb`. On a laptop you'll see `nvme0n1` or `sda`, split into partitions like `nvme0n1p2`.\n- **MOUNTPOINTS** is the key column: it shows which folder each disk appears as. The one mounted at `/` is your main system disk.\n- Plug in a USB stick on a desktop distro and it appears under `/media/<you>/` (Ubuntu, Mint) or `/run/media/<you>/` (Fedora, Arch).\n\n## Try it now\n1. Run `ls -F /` and match at least five names to the table above. Which entries end in `@`?\n2. Run `cat /etc/os-release` and find your exact distro and version. Then run `cat /etc/hostname` to see your machine's name.\n3. Run `ls /var/log`, then `ls /usr/bin`. That second list is long: every command you'll learn lives there. Look for `ls`, `cd` (not there — it's built into bash), and `python3`.\n4. Run `lsblk` and find the disk mounted at `/`. If you're on a desktop, plug in a USB stick, run `lsblk` again and spot the new line and its mount point.\n5. Run `xdg-open .` from your home folder. It opens the current folder in your desktop's file manager (it won't work on a server with no desktop).\n\n## Common mistakes\n- **Mixing up `/`, `/root` and `~`.** `/` is the top of everything, `/root` is the admin's home, and `~` is *your* home (`/home/<you>`). \"Permission denied\" in `/root` or when writing to `/etc` doesn't mean something is broken; you just aren't the admin. `sudo` is Day 15.\n- **Saving important work in `/tmp`.** It's scratch space and is often emptied on reboot. Anything you want to keep goes in `~`.\n- **Looking for a USB drive in the wrong place.** It's not `/dev/sdb` (that's the raw device, not its files). Its files are where it's *mounted*: check the MOUNTPOINTS column of `lsblk`, usually under `/media` or `/run/media`.\n\n## Cheat sheet\n| Path / command | What it's for |\n|---|---|\n| `/` | Root: the top of the single tree |\n| `/home/<you>` = `~` | Your files and projects |\n| `/root` | Admin's home (not `/`) |\n| `/etc` | System config (text files) |\n| `/var/log` | Log files |\n| `/usr/bin` | Installed commands and programs |\n| `/tmp` | Temporary scratch files |\n| `/media` · `/run/media` · `/mnt` | Where drives are attached |\n| `ls -F /` | See the top level, folders marked / |\n| `cat /etc/os-release` | Which Linux version you're on |\n| `lsblk` | Disks and where they're mounted |\n| `xdg-open .` | Open the current folder in the file manager |\n"
+  },
+  "quiz": [
+    {
+      "type": "mcq",
+      "q": "You need to change nginx's settings. Which folder first?",
+      "options": [
+        "/var",
+        "/usr/bin",
+        "/etc",
+        "/tmp"
+      ],
+      "answer": 2,
+      "explain": "System config lives in `/etc` (here `/etc/nginx/`)."
+    },
+    {
+      "type": "mcq",
+      "q": "Where do log files usually live?",
+      "options": [
+        "/var/log",
+        "/etc/log",
+        "/usr/log",
+        "/home/log"
+      ],
+      "answer": 0,
+      "explain": "`/var` holds changing data; logs are in `/var/log`."
+    },
+    {
+      "type": "mcq",
+      "q": "What is `/root`?",
+      "options": [
+        "The top of the tree",
+        "The admin user's home folder",
+        "Where programs live",
+        "A virtual kernel folder"
+      ],
+      "answer": 1,
+      "explain": "`/` is the top; `/root` is root's home. Normal users can't open it."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that lists the top level of the tree, marking folders with a trailing /.",
+      "accept": [
+        "ls -F /"
+      ],
+      "explain": "`ls -F /` lists the root and marks directories with `/` and links with `@`."
+    },
+    {
+      "type": "mcq",
+      "q": "Which folder is scratch space that may be emptied automatically?",
+      "options": [
+        "/opt",
+        "/tmp",
+        "/srv",
+        "/home"
+      ],
+      "answer": 1,
+      "explain": "Don't keep important work in `/tmp`."
+    },
+    {
+      "type": "mcq",
+      "q": "Why keep code under `~` instead of `/mnt/c`?",
+      "options": [
+        "/mnt/c is read-only",
+        "Linux tools are much slower there and permissions/line endings behave oddly",
+        "Git doesn't work on Windows",
+        "It's a security rule"
+      ],
+      "answer": 1,
+      "explain": "Crossing to the Windows drive slows git, npm and builds; keep projects in `~/projects`.",
+      "tracks": [
+        "wsl"
+      ]
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that lists disks and where each is mounted.",
+      "accept": [
+        "lsblk"
+      ],
+      "explain": "`lsblk`'s MOUNTPOINTS column shows where each disk appears in the tree.",
+      "tracks": [
+        "linux"
+      ]
+    }
+  ]
+}

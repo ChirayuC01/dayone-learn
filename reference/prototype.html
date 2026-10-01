@@ -1,0 +1,446 @@
+<title>Linux Course</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a manual — module/day index on the left, one reading column, quiz panel at the end of each lesson. Dark-first, phosphor amber accent. */
+:root{
+  --bg:#0f1318; --panel:#151b22; --raised:#1b232c; --line:#2a3440;
+  --fg:#e3e8ee; --muted:#93a0ae; --accent:#f0b44c; --accent-ink:#1a1206;
+  --ok:#5fd0a6; --bad:#ff7d7d; --code-bg:#0a0d11; --out:#b9c4cf;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f5f6f3; --panel:#ffffff; --raised:#eef0ec; --line:#d7dbd3;
+  --fg:#1b2026; --muted:#5b6672; --accent:#a86a00; --accent-ink:#fff8ec;
+  --ok:#11845f; --bad:#c23b3b; --code-bg:#1b2026; --out:#c9d2db; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#f5f6f3; --panel:#ffffff; --raised:#eef0ec; --line:#d7dbd3;
+  --fg:#1b2026; --muted:#5b6672; --accent:#a86a00; --accent-ink:#fff8ec;
+  --ok:#11845f; --bad:#c23b3b; --code-bg:#1b2026; --out:#c9d2db; color-scheme:light}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 var(--f-body);margin:0}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code,kbd,pre{font-family:var(--f-mono)}
+
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:100vh}
+/* ---------- sidebar ---------- */
+.side{background:var(--panel);border-right:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);height:100vh;overflow-y:auto;padding-block:20px 40px;padding-inline:16px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px 14px;text-decoration:none;color:var(--fg)}
+.brand-mark{font:600 13px var(--f-mono);background:var(--accent);color:var(--accent-ink);border-radius:4px;padding:2px 6px}
+.brand-name{font:800 20px/1 var(--f-display);letter-spacing:-.01em}
+.track{display:grid;grid-template-columns:1fr 1fr;background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:3px;margin:0 0 14px}
+.track button{border:0;background:transparent;padding:7px 4px;border-radius:6px;font-size:14px;cursor:pointer;color:var(--muted)}
+.track button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.nav-home{display:block;padding:8px 10px;border-radius:6px;text-decoration:none;color:var(--fg);font-weight:700;margin-bottom:8px}
+.nav-home[aria-current="page"],.day[aria-current="page"],.mtest[aria-current="page"]{background:var(--raised);box-shadow:inset 3px 0 0 var(--accent)}
+.mod{margin-top:14px}
+.mod-h{font:600 11px/1.3 var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:0 10px 6px;display:flex;justify-content:space-between;gap:8px}
+.day,.mtest{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--fg);font-size:14px;line-height:1.35}
+.day .n{font:12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.day.locked{color:var(--muted);opacity:.55;pointer-events:none}
+.mtest{color:var(--accent);font-weight:700}
+.chip{font:600 11px var(--f-mono);border-radius:999px;padding:1px 7px;border:1px solid var(--line);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip.ok{color:var(--ok);border-color:currentColor}
+.chip.mid{color:var(--accent);border-color:currentColor}
+.chip.bad{color:var(--bad);border-color:currentColor}
+.chip.new{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+
+/* ---------- top bar (phone) ---------- */
+.topbar{display:none}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;inset:0 auto 0 0;width:min(86vw,320px);z-index:20;transform:translateX(-102%);transition:transform .2s ease;padding-top:calc(20px + env(safe-area-inset-top,0px))}
+  .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+  .topbar{display:flex;align-items:center;gap:12px;position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px}
+  .topbar .brand{padding:0}
+  .menu-btn{border:1px solid var(--line);background:var(--raised);border-radius:6px;padding:6px 10px;cursor:pointer}
+}
+@media (prefers-reduced-motion:reduce){.side{transition:none}}
+
+/* ---------- main column ---------- */
+main{padding-block:32px 80px;padding-inline:24px;min-width:0}
+.col{max-width:72ch;margin:0 auto}
+@media (max-width:500px){main{padding-inline:16px;padding-top:20px}}
+.eyebrow{font:600 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px}
+.eyebrow b{color:var(--accent);font-weight:600}
+h1{font:800 clamp(28px,5vw,42px)/1.08 var(--f-display);letter-spacing:-.02em;margin:10px 0 18px;text-wrap:balance}
+.lesson h2{font:800 24px/1.2 var(--f-display);margin:44px 0 12px;text-wrap:balance;letter-spacing:-.01em}
+.lesson h3{font:600 15px/1.4 var(--f-mono);margin:30px 0 8px;color:var(--fg)}
+.lesson h3 code{background:none;padding:0}
+.lesson p,.lesson li{max-width:68ch}
+.lesson ul,.lesson ol{padding-left:22px}
+.lesson li{margin:4px 0}
+.lesson :not(pre)>code{background:var(--raised);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:.88em;overflow-wrap:anywhere}
+.lesson blockquote{margin:18px 0;padding:12px 16px;background:var(--raised);border-radius:8px;border:1px solid var(--line)}
+.lesson blockquote p{margin:0}
+.lesson table{border-collapse:collapse;width:100%;font-size:15px}
+.tbl{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:8px}
+.lesson th,.lesson td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.lesson th{font:600 12px var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--raised)}
+.lesson tr:last-child td{border-bottom:0}
+.lesson td code{white-space:nowrap}
+.lesson details{margin:16px 0;border:1px solid var(--line);border-radius:8px;padding:10px 14px;background:var(--panel)}
+.lesson summary{cursor:pointer;font-weight:700;color:var(--accent)}
+
+/* code blocks */
+.cb{position:relative;margin:10px 0 0;border-radius:8px;background:var(--code-bg);border:1px solid var(--line);overflow:hidden}
+.cb pre{margin:0;padding:12px 14px;overflow-x:auto;font-size:14px;line-height:1.5;color:#e9eef3}
+.cb.cmd pre code::before{content:"$ ";color:#f0b44c;user-select:none}
+.cb.cmd pre{padding-right:64px}
+.cb.out{background:transparent;border-style:dashed;margin-top:6px}
+.cb.out pre{color:var(--muted);font-size:13px}
+.cb.out::before{content:"output";position:absolute;right:8px;top:6px;font:11px var(--f-mono);color:var(--muted);opacity:.7}
+.cb.diagram pre{color:var(--fg);background:var(--panel)}
+.copy{position:absolute;right:6px;top:6px;border:1px solid #39444f;background:#1b232c;color:#cfd8e1;font:12px var(--f-mono);padding:3px 8px;border-radius:5px;cursor:pointer}
+.copy:hover{border-color:#f0b44c;color:#f0b44c}
+
+/* ---------- quiz ---------- */
+.quiz{margin-top:56px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.quiz-h{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.quiz-h h2{margin:0;font:800 22px/1.2 var(--f-display)}
+.quiz-h p{margin:0;color:var(--muted);font-size:14px}
+.q{padding:18px 20px;border-bottom:1px solid var(--line)}
+.q-num{font:600 12px var(--f-mono);color:var(--muted);margin-bottom:4px}
+.q-text{font-weight:700;margin:0 0 12px}
+.q-text code{background:var(--raised);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-weight:400;font-size:.9em}
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 12px;cursor:pointer;line-height:1.4}
+.opt .k{font:600 12px/1.6 var(--f-mono);color:var(--muted);flex:none}
+.opt:hover{border-color:var(--muted)}
+.opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.opt.right{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.opt.wrong{border-color:var(--bad);box-shadow:inset 0 0 0 1px var(--bad)}
+.opt:disabled{cursor:default}
+.term{display:flex;align-items:center;gap:8px;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.term span{font:600 14px var(--f-mono);color:#f0b44c}
+.term input{flex:1;min-width:0;background:transparent;border:0;color:#e9eef3;font:14px var(--f-mono);outline:none}
+.term:focus-within{border-color:var(--accent)}
+.term.right{border-color:var(--ok)} .term.wrong{border-color:var(--bad)}
+.fb{margin-top:10px;font-size:15px;padding:10px 12px;border-radius:8px;background:var(--raised)}
+.fb b.ok{color:var(--ok)} .fb b.bad{color:var(--bad)}
+.fb code{font-size:.88em}
+.quiz-f{padding:16px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.btn{border:0;border-radius:8px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
+.btn:disabled{opacity:.5;cursor:default}
+.result{font:600 15px var(--f-mono);font-variant-numeric:tabular-nums}
+.note{font-size:13px;color:var(--muted)}
+
+/* ---------- home ---------- */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
+@media (max-width:560px){.stats{grid-template-columns:1fr 1fr}}
+.stat{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--panel)}
+.stat .v{font:800 28px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.stat .l{font:12px var(--f-mono);color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.06em}
+.bar{height:8px;background:var(--raised);border-radius:999px;overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:inherit}
+.next{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center;border:1px solid var(--accent);border-radius:12px;padding:16px 18px;background:var(--panel);margin:8px 0 32px}
+.next .t{font:800 20px/1.25 var(--f-display)}
+.next .s{color:var(--muted);font-size:14px}
+.sec-h{font:800 22px var(--f-display);margin:36px 0 12px}
+.modgrid{display:grid;gap:8px}
+.modrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.modrow .bar{margin-top:6px}
+.lb{width:100%;border-collapse:collapse;font-size:15px}
+.lb th,.lb td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;font-variant-numeric:tabular-nums}
+.lb th{font:600 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.lb tr.me td{color:var(--accent);font-weight:700}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted)}
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:28px;flex-wrap:wrap}
+.pager a{text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--fg);max-width:48%;font-size:14px}
+.pager a span{display:block;font:12px var(--f-mono);color:var(--muted)}
+.foot{margin-top:56px;font-size:13px;color:var(--muted)}
+.skeleton{color:var(--muted)}
+</style>
+
+<div class="topbar"><button class="menu-btn" id="menuBtn" aria-controls="side" aria-expanded="false">☰ Lessons</button><a class="brand" href="#home"><span class="brand-mark">$_</span><span class="brand-name">Linux Course</span></a></div>
+<div class="app">
+  <nav class="side" id="side" aria-label="Lessons">
+    <a class="brand" href="#home"><span class="brand-mark">$_</span><span class="brand-name">Linux Course</span></a>
+    <div class="track" role="group" aria-label="Track">
+      <button id="trk-wsl" data-track="wsl" aria-pressed="true">WSL on Windows</button>
+      <button id="trk-linux" data-track="linux" aria-pressed="false">Native Linux</button>
+    </div>
+    <a class="nav-home" href="#home" id="navHome">Dashboard</a>
+    <div id="navMods"></div>
+  </nav>
+  <main><div class="col" id="view"><p class="skeleton">Loading the course…</p></div></main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+(function(){
+"use strict";
+const NOTION_URL = "https://app.notion.com/p/3e5958aaf80b8173bc3cca20d046c36a";
+const MODULES = [
+ {n:1,t:"Getting Started",d:["What Linux is: kernel, distributions, and why developers use it","Setting up Linux and a first look at the terminal","How commands work: arguments, options, man, and --help","Moving around: pwd, ls, and cd with absolute vs relative paths","The Linux filesystem layout","Module 1 review and mini-challenge"]},
+ {n:2,t:"Files & Directories",d:["Creating files and folders: touch, mkdir, mkdir -p","Copying, moving, and renaming: cp and mv","Deleting safely: rm, rmdir, and the dangers of rm -r","Reading files: cat, less, head, tail, tail -f","Wildcards and globbing (*, ?, [ ])","Editing files in the terminal with nano","Module 2 review and mini-challenge"]},
+ {n:3,t:"Users & Permissions",d:["Users, groups, and root: whoami, id, groups","sudo: what it does and when to use it","Reading permissions with ls -l (rwx)","Changing permissions: chmod in symbolic and numeric form","Changing ownership: chown and chgrp","Hidden files, dotfiles, and your home directory","Module 3 review and mini-challenge"]},
+ {n:4,t:"Working with Text",d:["echo and redirection: >, >>, <","Pipes: chaining commands with |","Searching inside files with grep","Finding files with find","Sorting and counting: sort, uniq, wc, cut","A gentle intro to sed and awk","stdout vs stderr, 2>, and /dev/null","Module 4 review and mini-challenge"]},
+ {n:5,t:"Packages & Software",d:["Installing software with a package manager","Finding packages","Downloading from the terminal: curl and wget","Archives and compression: tar, gzip, zip","Module 5 review and mini-challenge"]},
+ {n:6,t:"Processes & the System",d:["What's running: ps, top, and htop","Controlling processes: kill, signals, jobs, bg, fg, and &","Disk and memory: df, du, free","System information: uname, lsb_release, uptime, hostname","Services with systemd and systemctl","Reading logs: journalctl and /var/log","Module 6 review and mini-challenge"]},
+ {n:7,t:"The Shell Environment",d:["Environment variables, export, and PATH","Customising your shell: .bashrc and aliases","Working faster: history, tab completion, and shortcuts","Where commands come from: which, type, and whereis","Links: symbolic vs hard links with ln","Module 7 review and mini-challenge"]},
+ {n:8,t:"Shell Scripting",d:["Your first script: shebang, chmod +x, and running it","Variables and user input with read","Conditions: if, test, and [ ]","Loops: for and while","Functions and exit codes","Script arguments: $1, $#, and $@","Mini project, part 1: a backup script","Mini project, part 2: options and error handling","Module 8 review and mini-challenge"]},
+ {n:9,t:"Networking Basics",d:["IP addresses and connectivity: ip a and ping","DNS: dig, nslookup, and /etc/hosts","Ports and connections: ss","SSH: connecting to servers and using keys","Copying files between machines: scp and rsync","Module 9 review and mini-challenge"]},
+ {n:10,t:"Putting It Together",d:["Scheduling jobs with cron","Setting up a dev environment from the terminal","Firewall basics with ufw","Troubleshooting: reading errors, logs, and man pages","Final project and where to go next"]}
+];
+const SYL=[]; let dn=0;
+MODULES.forEach(m=>{m.days=[];m.d.forEach(t=>{dn++;SYL.push({day:dn,mod:m.n,title:t});m.days.push(dn)})});
+const TOTAL=SYL.length;
+const pad=n=>String(n).padStart(2,"0");
+const dayId=n=>"day-"+pad(n);
+
+/* ---------------- state ---------------- */
+const S={track:"wsl",lessons:{},modules:{},scores:{days:{},modules:{}},board:[],uid:null,db:null,user:null,canWrite:false,loaded:false,quiz:{}};
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+S.track=ls.get("lc.track")==="linux"?"linux":"wsl";
+try{const l=JSON.parse(ls.get("lc.scores")||"null");if(l&&l.days)S.scores=l}catch(e){}
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const inl=s=>esc(s).replace(/`([^`]+)`/g,"<code>$1</code>");
+
+/* ---------------- markdown ---------------- */
+function renderMd(md){
+  let html;
+  if(window.marked&&window.DOMPurify){html=DOMPurify.sanitize(marked.parse(md||""),{ADD_TAGS:["details","summary"]})}
+  else{html="<pre style='white-space:pre-wrap'>"+esc(md||"")+"</pre>"}
+  const box=document.createElement("div");box.innerHTML=html;
+  box.querySelectorAll("pre").forEach(pre=>{
+    const code=pre.querySelector("code");const cls=(code&&code.className)||"";
+    const w=document.createElement("div");w.className="cb";
+    if(/language-(bash|sh|shell)/.test(cls)){w.classList.add("cmd")}
+    else if(/language-output/.test(cls)){w.classList.add("out")}
+    else{w.classList.add("diagram")}
+    pre.replaceWith(w);w.appendChild(pre);
+    if(w.classList.contains("cmd")){const b=document.createElement("button");b.className="copy";b.type="button";b.textContent="copy";w.appendChild(b)}
+  });
+  box.querySelectorAll("table").forEach(t=>{const w=document.createElement("div");w.className="tbl";t.replaceWith(w);w.appendChild(t)});
+  return box;
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".copy");if(!b)return;
+  const txt=b.parentElement.querySelector("code").textContent.replace(/\n$/,"");
+  const done=()=>{b.textContent="copied";setTimeout(()=>b.textContent="copy",1400)};
+  try{navigator.clipboard.writeText(txt).then(done,()=>sel(b))}catch(err){sel(b)}
+  function sel(btn){const r=document.createRange();r.selectNodeContents(btn.parentElement.querySelector("code"));const s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent="press Ctrl+C"}
+});
+
+/* ---------------- scoring ---------------- */
+function norm(s){return String(s).trim().replace(/^\$\s*/,"").replace(/;+\s*$/,"").replace(/\s+/g," ")}
+function questionsFor(list){return (list||[]).filter(q=>!q.track||q.track===S.track)}
+function scoreChip(rec){
+  if(!rec)return "";
+  const p=Math.round(100*rec.best/rec.total);
+  const c=p>=80?"ok":p>=50?"mid":"bad";
+  return `<span class="chip ${c}" title="Best score">${rec.best}/${rec.total}</span>`;
+}
+async function saveResult(kind,id,got,total){
+  const bucket=S.scores[kind]||(S.scores[kind]={});
+  const prev=bucket[id];
+  bucket[id]={best:Math.max(got,prev?prev.best:0),total,last:got,attempts:(prev?prev.attempts:0)+1,at:new Date().toISOString(),track:S.track};
+  ls.set("lc.scores",JSON.stringify(S.scores));
+  if(S.db&&S.uid&&S.canWrite){
+    try{await S.db.doc("scores/"+S.uid).set({days:S.scores.days||{},modules:S.scores.modules||{},updatedAt:new Date().toISOString()})}
+    catch(e){if(e&&e.code==="invalid_argument"){S.canWrite=false}}
+  }
+  renderNav();
+}
+
+/* ---------------- quiz UI ---------------- */
+function quizBlock(kind,id,list,title,sub){
+  const qs=questionsFor(list);
+  const wrap=document.createElement("section");wrap.className="quiz";wrap.id="quiz";
+  if(!qs.length){wrap.innerHTML=`<div class="quiz-h"><h2>${esc(title)}</h2><p>Questions for this lesson haven't been added yet.</p></div>`;return wrap}
+  const rec=(S.scores[kind]||{})[id];
+  wrap.innerHTML=`<div class="quiz-h"><h2>${esc(title)}</h2><p>${esc(sub)} · ${qs.length} questions${rec?` · best ${rec.best}/${rec.total}`:""}</p></div>`+
+   qs.map((q,i)=>{
+     const head=`<div class="q-num">Q${i+1} · ${q.type==="cmd"?"type the command":"choose one"}</div><p class="q-text">${inl(q.q)}</p>`;
+     const body=q.type==="cmd"
+       ? `<label class="term" for="${id}-q${i}"><span>$</span><input id="${id}-q${i}" autocomplete="off" autocapitalize="off" spellcheck="false" data-i="${i}" aria-label="Your command"></label>`
+       : `<div class="opts">${q.options.map((o,j)=>`<button type="button" class="opt" data-i="${i}" data-j="${j}" aria-pressed="false"><span class="k">${"ABCD"[j]}</span><span>${inl(o)}</span></button>`).join("")}</div>`;
+     return `<div class="q" data-i="${i}">${head}${body}<div class="fb" hidden></div></div>`}).join("")+
+   `<div class="quiz-f"><span class="note" id="${id}-note">${S.canWrite?"Your best score is saved to your progress.":"Scores are saved in this browser."}</span><span class="result" hidden></span><div style="display:flex;gap:8px"><button class="btn ghost" type="button" data-act="reset" hidden>Try again</button><button class="btn" type="button" data-act="check">Check answers</button></div></div>`;
+  const picks={};
+  wrap.addEventListener("click",e=>{
+    const o=e.target.closest(".opt");
+    if(o&&!o.disabled){const i=o.dataset.i;picks[i]=+o.dataset.j;wrap.querySelectorAll(`.opt[data-i="${i}"]`).forEach(b=>b.setAttribute("aria-pressed",String(b===o)))}
+    const a=e.target.closest("[data-act]");if(!a)return;
+    if(a.dataset.act==="check")check();else reset();
+  });
+  wrap.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches(".term input")){e.preventDefault();const nx=wrap.querySelectorAll(".term input")[[...wrap.querySelectorAll(".term input")].indexOf(e.target)+1];nx?nx.focus():wrap.querySelector('[data-act="check"]').focus()}});
+  function check(){
+    let got=0;
+    qs.forEach((q,i)=>{
+      const box=wrap.querySelector(`.q[data-i="${i}"]`),fb=box.querySelector(".fb");let ok=false,msg="";
+      if(q.type==="cmd"){
+        const inp=box.querySelector("input"),v=norm(inp.value),acc=q.accept.map(norm);
+        ok=acc.includes(v);
+        if(!ok&&acc.map(a=>a.toLowerCase()).includes(v.toLowerCase())&&v)msg=" Close: Linux is case-sensitive.";
+        inp.readOnly=true;inp.closest(".term").classList.add(ok?"right":"wrong");
+        fb.innerHTML=`<b class="${ok?"ok":"bad"}">${ok?"Correct.":"Not quite."}</b>${msg} ${ok?"":`Answer: <code>${esc(q.accept[0])}</code>. `}${inl(q.explain||"")}`;
+      }else{
+        ok=picks[i]===q.answer;
+        box.querySelectorAll(".opt").forEach(b=>{b.disabled=true;const j=+b.dataset.j;if(j===q.answer)b.classList.add("right");else if(j===picks[i])b.classList.add("wrong")});
+        fb.innerHTML=`<b class="${ok?"ok":"bad"}">${ok?"Correct.":picks[i]===undefined?"No answer picked.":"Not quite."}</b> ${inl(q.explain||"")}`;
+      }
+      fb.hidden=false;if(ok)got++;
+    });
+    const r=wrap.querySelector(".result");r.hidden=false;const p=Math.round(100*got/qs.length);
+    r.textContent=`${got}/${qs.length} · ${p}%`;r.style.color=p>=80?"var(--ok)":p>=50?"var(--accent)":"var(--bad)";
+    wrap.querySelector('[data-act="check"]').hidden=true;wrap.querySelector('[data-act="reset"]').hidden=false;
+    saveResult(kind,id,got,qs.length);
+  }
+  function reset(){const fresh=quizBlock(kind,id,list,title,sub);wrap.replaceWith(fresh);fresh.querySelector(".q input, .q .opt")?.focus()}
+  return wrap;
+}
+
+/* ---------------- nav ---------------- */
+function renderNav(){
+  const route=location.hash.replace("#","")||"home";
+  $("#navHome").setAttribute("aria-current",route==="home"?"page":"false");
+  $("#navMods").innerHTML=MODULES.map(m=>{
+    const pub=m.days.filter(d=>S.lessons[dayId(d)]).length;
+    const days=m.days.map(d=>{
+      const id=dayId(d),L=S.lessons[id],s=SYL[d-1];
+      const t=L?(S.track==="linux"&&L.linuxTitle?L.linuxTitle:L.title):s.title;
+      const chip=L?(scoreChip(S.scores.days[id])||(questionsFor(L.quiz).length?`<span class="chip new">quiz</span>`:"")):"";
+      return `<a class="day${L?"":" locked"}" href="#${id}" ${route===id?'aria-current="page"':""} ${L?"":'aria-disabled="true" tabindex="-1"'}><span class="n">${pad(d)}</span><span>${esc(t)}</span>${chip}</a>`}).join("");
+    const mid="module-"+m.n,MT=S.modules[mid];
+    const test=MT?`<a class="mtest" href="#${mid}" ${route===mid?'aria-current="page"':""}><span class="n">★</span><span>Module ${m.n} test</span>${scoreChip(S.scores.modules[mid])||'<span class="chip new">test</span>'}</a>`:"";
+    return `<div class="mod"><div class="mod-h"><span>M${m.n} · ${esc(m.t)}</span><span>${pub}/${m.days.length}</span></div>${days}${test}</div>`}).join("");
+}
+
+/* ---------------- views ---------------- */
+function viewHome(){
+  const pubDays=SYL.filter(s=>S.lessons[dayId(s.day)]);
+  const quizzed=Object.keys(S.scores.days||{}).filter(k=>S.lessons[k]);
+  const recs=quizzed.map(k=>S.scores.days[k]);
+  const avg=recs.length?Math.round(100*recs.reduce((a,r)=>a+r.best/r.total,0)/recs.length):null;
+  const latest=pubDays[pubDays.length-1];
+  const nextUp=pubDays.find(s=>!S.scores.days[dayId(s.day)])||latest;
+  const v=$("#view");
+  const trackName=S.track==="wsl"?"Ubuntu on WSL (Windows)":"native Linux, any distro";
+  let h=`<div class="eyebrow"><span>66-day course</span><span>Track: <b>${trackName}</b></span></div>
+  <h1>Learn Linux one lesson a day, then prove it.</h1>
+  <p>A new lesson lands every morning at 4:30 AM IST. Each one ends with a short quiz, and each module ends with a test covering the whole module. Switch between the WSL and native Linux versions any time from the sidebar.</p>
+  <div class="stats">
+   <div class="stat"><div class="v">${pubDays.length}<span style="font-size:16px;color:var(--muted)">/${TOTAL}</span></div><div class="l">Lessons out</div><div class="bar"><i style="width:${100*pubDays.length/TOTAL}%"></i></div></div>
+   <div class="stat"><div class="v">${quizzed.length}<span style="font-size:16px;color:var(--muted)">/${pubDays.length||0}</span></div><div class="l">Quizzes done</div><div class="bar"><i style="width:${pubDays.length?100*quizzed.length/pubDays.length:0}%"></i></div></div>
+   <div class="stat"><div class="v">${avg===null?"–":avg+"%"}</div><div class="l">Average best score</div></div>
+  </div>`;
+  if(!S.loaded){h+=`<div class="empty">Loading lessons…</div>`}
+  else if(!pubDays.length){h+=`<div class="empty">No lessons have been published here yet. The first one appears after the next morning run.</div>`}
+  else{
+    const L=S.lessons[dayId(nextUp.day)];
+    const label=S.scores.days[dayId(nextUp.day)]?"Latest lesson":"Up next";
+    h+=`<div class="next"><div><div class="eyebrow">${label} · Day ${pad(nextUp.day)}</div><div class="t">${esc(S.track==="linux"&&L.linuxTitle?L.linuxTitle:L.title)}</div><div class="s">Module ${nextUp.mod} · ${esc(MODULES[nextUp.mod-1].t)}</div></div><a class="btn" href="#${dayId(nextUp.day)}" style="text-decoration:none">Open lesson</a></div>`;
+  }
+  h+=`<h2 class="sec-h">Modules</h2><div class="modgrid">`+MODULES.map(m=>{
+    const pub=m.days.filter(d=>S.lessons[dayId(d)]).length;const mid="module-"+m.n;
+    const tr=S.scores.modules[mid];
+    const right=S.modules[mid]?(tr?scoreChip(tr):`<a class="chip new" href="#${mid}" style="text-decoration:none">take test</a>`):`<span class="chip">${pub?"in progress":"upcoming"}</span>`;
+    return `<div class="modrow"><div><b>M${m.n} · ${esc(m.t)}</b> <span class="note">${pub}/${m.days.length} lessons</span><div class="bar"><i style="width:${100*pub/m.days.length}%"></i></div></div>${right}</div>`}).join("")+`</div>`;
+  h+=`<h2 class="sec-h">Leaderboard</h2><div id="board"></div>`;
+  h+=`<p class="foot">Lessons and doubts are also kept in <a href="${NOTION_URL}" target="_blank" rel="noopener">the Notion course page</a>.</p>`;
+  v.innerHTML=h;renderBoard();
+}
+async function renderBoard(){
+  const el=$("#board");if(!el)return;
+  if(!S.db){el.innerHTML=`<div class="empty">The leaderboard shows everyone's quiz progress when you're signed in to claude.ai.</div>`;return}
+  const rows=S.board.map(r=>{
+    const ds=Object.entries(r.days||{}).filter(([k])=>S.lessons[k]).map(([,v])=>v);
+    const ms=Object.values(r.modules||{});
+    const all=ds.concat(ms);
+    const pts=all.reduce((a,x)=>a+x.best,0);
+    const avg=all.length?Math.round(100*all.reduce((a,x)=>a+x.best/x.total,0)/all.length):0;
+    return {id:r.id,quizzes:ds.length,tests:ms.length,pts,avg}}).filter(r=>r.quizzes||r.tests).sort((a,b)=>b.pts-a.pts||b.avg-a.avg);
+  if(!rows.length){el.innerHTML=`<div class="empty">Nobody is on the board yet. Finish a quiz to be first.</div>`;return}
+  let names={};
+  try{if(S.user&&S.user.profiles)names=await S.user.profiles(rows.map(r=>r.id))}catch(e){}
+  el.innerHTML=`<div class="tbl"><table class="lb"><thead><tr><th>#</th><th>Learner</th><th>Quizzes</th><th>Tests</th><th>Points</th><th>Avg</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.id===S.uid?"me":""}"><td>${i+1}</td><td></td><td>${r.quizzes}</td><td>${r.tests}</td><td>${r.pts}</td><td>${r.avg}%</td></tr>`).join("")}</tbody></table></div><p class="note">Points = correct answers on your best attempt at each quiz and module test.</p>`;
+  el.querySelectorAll("tbody tr").forEach((tr,i)=>{const p=names&&names[rows[i].id];tr.children[1].textContent=((p&&p.name)||"Learner")+(rows[i].id===S.uid?" (you)":"")})
+}
+function viewDay(n){
+  const id=dayId(n),L=S.lessons[id],s=SYL[n-1],v=$("#view");
+  if(!s){location.hash="home";return}
+  if(!L){v.innerHTML=`<div class="eyebrow"><span>Day ${pad(n)} of ${TOTAL}</span><span>Module ${s.mod} · ${esc(MODULES[s.mod-1].t)}</span></div><h1>${esc(s.title)}</h1><div class="empty">${S.loaded?"This lesson hasn't been published yet. It arrives on its scheduled morning.":"Loading…"}</div>`;return}
+  const md=(S.track==="linux"?(L.linux||L.wsl):(L.wsl||L.linux))||"";
+  const title=S.track==="linux"&&L.linuxTitle?L.linuxTitle:L.title;
+  v.innerHTML=`<div class="eyebrow"><span>Day <b>${pad(n)}</b> of ${TOTAL}</span><span>Module ${s.mod} · ${esc(MODULES[s.mod-1].t)}</span><span>${S.track==="wsl"?"WSL track":"Native Linux track"}</span><span>~15–20 min</span></div><h1>${esc(title)}</h1>`;
+  const art=document.createElement("article");art.className="lesson";art.appendChild(renderMd(md));v.appendChild(art);
+  v.appendChild(quizBlock("days",id,L.quiz,"Check yourself","Day "+pad(n)+" quiz"));
+  const isLastOfMod=MODULES[s.mod-1].days.slice(-1)[0]===n, mid="module-"+s.mod;
+  if(isLastOfMod&&S.modules[mid]){const a=document.createElement("div");a.className="next";a.style.marginTop="24px";a.innerHTML=`<div><div class="eyebrow">Module ${s.mod} complete</div><div class="t">Take the Module ${s.mod} test</div><div class="s">Questions from every lesson in ${esc(MODULES[s.mod-1].t)}.</div></div><a class="btn" href="#${mid}" style="text-decoration:none">Start test</a>`;v.appendChild(a)}
+  const prev=n>1&&S.lessons[dayId(n-1)],next=S.lessons[dayId(n+1)];
+  const pg=document.createElement("nav");pg.className="pager";pg.innerHTML=(prev?`<a href="#${dayId(n-1)}"><span>← Day ${pad(n-1)}</span>${esc(prev.title)}</a>`:"<span></span>")+(next?`<a href="#${dayId(n+1)}" style="text-align:right"><span>Day ${pad(n+1)} →</span>${esc(next.title)}</a>`:"");
+  v.appendChild(pg);
+}
+function viewModule(m){
+  const mid="module-"+m,M=S.modules[mid],mod=MODULES[m-1],v=$("#view");
+  if(!mod){location.hash="home";return}
+  v.innerHTML=`<div class="eyebrow"><span>Module test</span><span>Days ${pad(mod.days[0])}–${pad(mod.days[mod.days.length-1])}</span></div><h1>Module ${m}: ${esc(mod.t)}</h1>`;
+  if(!M){v.innerHTML+=`<div class="empty">${S.loaded?"This test unlocks when the module's review lesson is published.":"Loading…"}</div>`;return}
+  const p=document.createElement("p");p.textContent="This test mixes questions from every lesson in the module. Take it after the review day, and retake it as often as you like: your best score counts.";v.appendChild(p);
+  v.appendChild(quizBlock("modules",mid,M.quiz,"Module "+m+" test","Covers the whole module"));
+}
+function route(){
+  const r=location.hash.replace("#","")||"home";
+  let m;
+  if((m=r.match(/^day-(\d+)$/)))viewDay(+m[1]);
+  else if((m=r.match(/^module-(\d+)$/)))viewModule(+m[1]);
+  else viewHome();
+  renderNav();
+  $("#side").classList.remove("open");$("#menuBtn").setAttribute("aria-expanded","false");
+}
+let lastRoute=null;
+window.addEventListener("hashchange",()=>{route();window.scrollTo(0,0)});
+
+/* track toggle + menu */
+function setTrack(t){S.track=t;ls.set("lc.track",t);document.querySelectorAll(".track button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.track===t)));route()}
+document.querySelectorAll(".track button").forEach(b=>b.addEventListener("click",()=>setTrack(b.dataset.track)));
+setTrack(S.track);
+$("#menuBtn").addEventListener("click",()=>{const o=$("#side").classList.toggle("open");$("#menuBtn").setAttribute("aria-expanded",String(o))});
+document.addEventListener("click",e=>{const sd=$("#side");if(sd.classList.contains("open")&&!sd.contains(e.target)&&e.target!==$("#menuBtn"))sd.classList.remove("open")});
+
+/* ---------------- data ---------------- */
+function refreshIfSafe(){
+  // don't wipe a quiz someone is in the middle of
+  const busy=[...document.querySelectorAll(".quiz input")].some(i=>i.value)||document.querySelector(".quiz .opt[aria-pressed='true'], .quiz .opt:disabled");
+  if(busy){renderNav();return}
+  route();
+}
+(async function boot(){
+  const claude=window.claude;
+  if(!claude||!claude.use){S.loaded=true;route();return}
+  const [db,user]=await Promise.all([claude.use("db"),claude.use("user")]);
+  S.db=db;S.user=user;
+  if(!db){S.loaded=true;route();return}
+  if(user){try{S.uid=await user.id()}catch(e){}
+    let can=null;try{can=user.can?await user.can("data.write"):null}catch(e){}
+    S.canWrite=!!S.uid&&can!==false;}
+  let gotL=false,gotM=false;
+  const done=()=>{if(gotL&&gotM&&!S.loaded){S.loaded=true;route()}};
+  db.collection("lessons").onSnapshot(snap=>{S.lessons={};snap.docs.forEach(d=>{if(d.exists)S.lessons[d.id]=d.data()});gotL=true;S.loaded?refreshIfSafe():done()},()=>{gotL=true;done()});
+  db.collection("modules").onSnapshot(snap=>{S.modules={};snap.docs.forEach(d=>{if(d.exists)S.modules[d.id]=d.data()});gotM=true;S.loaded?refreshIfSafe():done()},()=>{gotM=true;done()});
+  if(S.uid){
+    try{const me=await db.doc("scores/"+S.uid).get();
+      if(me.exists){const d=me.data();
+        // merge: keep the better of browser and server records
+        ["days","modules"].forEach(k=>{const srv=d[k]||{},loc=S.scores[k]||{};S.scores[k]={...loc,...srv};Object.keys(loc).forEach(id=>{if(srv[id]&&loc[id].best>srv[id].best)S.scores[k][id]=loc[id]})});
+        renderNav();
+      }}catch(e){}
+  }
+  db.collection("scores").onSnapshot(snap=>{S.board=snap.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));if((location.hash.replace("#","")||"home")==="home")renderBoard()},()=>{});
+})();
+route();
+})();
+</script>

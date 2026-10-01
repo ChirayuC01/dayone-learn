@@ -1,0 +1,78 @@
+{
+  "day": 4,
+  "module": 1,
+  "title": "Moving around",
+  "content": {
+    "wsl": "## Yesterday in 30 seconds\nA command line is **command + options + arguments** (`ls -lh /etc`). Short options (`-l`) can be combined (`-la`); long ones (`--all`) can't. For help: `CMD --help`, `man CMD` (quit with **q**), and `help CMD` for bash built-ins like `cd`.\n\n## Why this matters\nEvery developer task starts with being in the right folder: running `npm install` in your project, `git status` in a repo, a script next to its data. Knowing where you are and how to get somewhere is the single most-used terminal skill.\n\n## The concept\nThe filesystem is a **tree of folders** (Linux calls them *directories*). The very top is called the **root** and is written as a single slash: `/`. Everything hangs below it. There are no drive letters like `C:`.\n\n```text\n/\n├── etc\n├── tmp\n└── home\n    └── dev            ← your home folder (~)\n        └── projects\n            └── webapp\n                ├── app.py\n                └── src\n                    └── main.py\n```\n\nAt any moment your shell is **standing in one folder**, called the *current working directory*. Think of it like the folder open in File Explorer: commands act there unless you say otherwise.\n\nTo name a place you write a **path**. There are two kinds:\n- **Absolute path**: starts with `/` and spells the full route from the root. It works from anywhere, like a full postal address. Example: `/home/dev/projects/webapp`.\n- **Relative path**: does *not* start with `/` and is read starting from where you are now, like \"two doors down\". Example: from `/home/dev`, the path `projects/webapp` gets you to the same place.\n\nThree shortcuts you'll use constantly:\n- `.` means \"this folder\".\n- `..` means \"the parent folder\" (one level up).\n- `~` means \"my home folder\" (`/home/dev` for user dev).\n\nAnalogy for a developer: it's exactly like import paths. `/home/dev/projects` is an absolute import; `../utils` is a relative one resolved from the current file.\n\nNote: Linux uses forward slashes `/`. Windows uses backslashes `\\`. That difference matters in WSL (see Common mistakes).\n\n## Commands\nRun on Ubuntu 24.04 as a normal user `dev`, with a practice folder `~/projects/webapp` containing `app.py` and a folder `src` (holding `main.py`).\n\n### 1. Where am I? pwd\nSyntax: `pwd` (**p**rint **w**orking **d**irectory). No arguments needed.\n\n```bash\npwd\n```\n```output\n/home/dev\n```\n- It always prints an **absolute** path. A new terminal starts in your home folder.\n- Your prompt shows the same information in short form: `dev@vm:~$` means you're in `~`. After moving, it changes, e.g. `dev@vm:~/projects$`.\n\n### 2. What's here (or there)? ls PATH\nSyntax: `ls [OPTION]... [PATH]...`. Without a path it lists where you are; with a path it lists that place without moving you.\n\n```bash\nls\n```\n```output\nprojects\n```\n```bash\nls projects/webapp\n```\n```output\napp.py\nsrc\n```\n- `projects/webapp` is a **relative** path (no leading `/`), read from your current folder.\n\nWhich of those is a folder? Add `-F`, which puts a `/` after directories:\n\n```bash\nls -F projects/webapp\n```\n```output\napp.py\nsrc/\n```\nThe same listing with an **absolute** path works from anywhere:\n\n```bash\nls /home/dev/projects\n```\n```output\nwebapp\n```\n\n### 3. Go somewhere: cd PATH\nSyntax: `cd [DIR]` (**c**hange **d**irectory). It prints nothing when it works, so check with `pwd`.\n\n```bash\ncd projects\npwd\n```\n```output\n/home/dev/projects\n```\nYou can go several levels in one go:\n\n```bash\ncd webapp/src\npwd\n```\n```output\n/home/dev/projects/webapp/src\n```\nOr jump anywhere with an absolute path:\n\n```bash\ncd /etc\npwd\n```\n```output\n/etc\n```\n\n### 4. Going up: cd ..\n```bash\ncd ~/projects/webapp/src\ncd ..\npwd\n```\n```output\n/home/dev/projects/webapp\n```\n- `..` is the parent. Chain them to go up more: `cd ../..` from `/home/dev/projects/webapp/src` lands in `/home/dev/projects`.\n- You can mix: `cd ../webapp/src` means \"up one, then down into webapp, then src\".\n\n### 5. Shortcuts home and back: cd, cd ~, cd -\n```bash\ncd /etc\ncd -\n```\n```output\n/home/dev\n```\n- `cd -` goes back to the **previous** folder (like a TV remote's \"last channel\") and prints where it went.\n- `cd ~` and plain `cd` (no argument) both take you home. `~` also works inside other paths: `ls ~/projects` lists `webapp` from anywhere.\n\n## Try it now (in WSL)\n1. Open Ubuntu and run `pwd`. You should see `/home/<your-username>`. Then run `ls` and `ls -F`.\n2. Build the practice tree with `mkdir -p ~/projects/webapp/src` (you'll learn `mkdir` properly on Day 07, it only creates empty folders). Then `cd ~/projects` and check your prompt and `pwd`.\n3. Using **relative** paths only: `cd webapp/src`, then `cd ..`, then `cd ../..`. Run `pwd` after each step and predict the answer before pressing Enter.\n4. Using an **absolute** path: `cd /etc`, `pwd`, then `cd -` to jump back. Then `cd` alone to go home.\n5. Without moving, run `ls /`, `ls ~/projects` and `ls /mnt/c`. The last one is your Windows C: drive seen from Linux (tomorrow's topic).\n\n## Common mistakes\n- **Windows-style paths.** `cd C:\\Users` fails with `-bash: cd: C:Users: No such file or directory`, because bash treats `\\` as a special character and drops it. In WSL your C: drive is at `/mnt/c`, so use `cd /mnt/c/Users`.\n- **Spaces in names.** `cd my docs` gives `-bash: cd: too many arguments` because the space splits it into two arguments. Use quotes: `cd \"my docs\"`.\n- **Case and typos.** `cd Projects` fails with `No such file or directory` when the folder is `projects`. And `cd app.py` fails with `Not a directory`: you can only `cd` into folders.\n- **Relative vs absolute mix-up.** `cd /projects` (leading slash) looks for `projects` at the root, not in your home. Drop the slash or use `~/projects`.\n- **WSL: working under /mnt/c.** You *can* `cd` into Windows folders, but file access there is much slower for Linux tools, and permissions behave differently. Keep your code projects under `~` inside Linux.\n\n## Cheat sheet\n| Command | What it does |\n|---|---|\n| `pwd` | Print the folder you're in (absolute path) |\n| `ls PATH` | List a folder without moving there |\n| `ls -F` | Mark folders with a trailing / |\n| `cd PATH` | Move into a folder (relative or absolute) |\n| `cd ..` | Up one level (`../..` for two) |\n| `cd` / `cd ~` | Go to your home folder |\n| `cd -` | Back to the previous folder |\n| `/` · `.` · `..` · `~` | Root · here · parent · home |\n",
+    "linux": "## Yesterday in 30 seconds\nA command line is **command + options + arguments** (`ls -lh /etc`). Short options (`-l`) can be combined (`-la`); long ones (`--all`) can't. For help: `CMD --help`, `man CMD` (quit with **q**), and `help CMD` for bash built-ins like `cd`.\n\n## Why this matters\nEvery developer task starts with being in the right folder: running `npm install` in your project, `git status` in a repo, a script next to its data. Knowing where you are and how to get somewhere is the single most-used terminal skill.\n\n## The concept\nThe filesystem is a **tree of folders** (Linux calls them *directories*). The very top is called the **root** and is written as a single slash: `/`. Everything hangs below it, including other disks and USB drives. There are no drive letters.\n\n```text\n/\n├── etc\n├── tmp\n└── home\n    └── dev            ← your home folder (~)\n        └── projects\n            └── webapp\n                ├── app.py\n                └── src\n                    └── main.py\n```\n\nAt any moment your shell is **standing in one folder**, called the *current working directory*. Think of it like the folder open in your file manager: commands act there unless you say otherwise.\n\nTo name a place you write a **path**. There are two kinds:\n- **Absolute path**: starts with `/` and spells the full route from the root. It works from anywhere, like a full postal address. Example: `/home/dev/projects/webapp`.\n- **Relative path**: does *not* start with `/` and is read starting from where you are now, like \"two doors down\". Example: from `/home/dev`, the path `projects/webapp` gets you to the same place.\n\nThree shortcuts you'll use constantly:\n- `.` means \"this folder\".\n- `..` means \"the parent folder\" (one level up).\n- `~` means \"my home folder\" (`/home/dev` for user dev).\n\nAnalogy for a developer: it's exactly like import paths. `/home/dev/projects` is an absolute import; `../utils` is a relative one resolved from the current file.\n\n## Commands\nRun on Ubuntu 24.04 as a normal user `dev`, with a practice folder `~/projects/webapp` containing `app.py` and a folder `src` (holding `main.py`). They behave identically on every distro.\n\n### 1. Where am I? pwd\nSyntax: `pwd` (**p**rint **w**orking **d**irectory). No arguments needed.\n\n```bash\npwd\n```\n```output\n/home/dev\n```\n- It always prints an **absolute** path. A new terminal starts in your home folder.\n- Your prompt shows the same information in short form: `dev@vm:~$` (or `[dev@vm ~]$` on Fedora/Arch) means you're in `~`. After moving, it changes, e.g. `dev@vm:~/projects$`. Fedora/Arch prompts show only the last folder name: `[dev@vm projects]$`.\n\n### 2. What's here (or there)? ls PATH\nSyntax: `ls [OPTION]... [PATH]...`. Without a path it lists where you are; with a path it lists that place without moving you.\n\n```bash\nls\n```\n```output\nprojects\n```\n```bash\nls projects/webapp\n```\n```output\napp.py\nsrc\n```\n- `projects/webapp` is a **relative** path (no leading `/`), read from your current folder.\n\nWhich of those is a folder? Add `-F`, which puts a `/` after directories:\n\n```bash\nls -F projects/webapp\n```\n```output\napp.py\nsrc/\n```\nThe same listing with an **absolute** path works from anywhere:\n\n```bash\nls /home/dev/projects\n```\n```output\nwebapp\n```\n\n### 3. Go somewhere: cd PATH\nSyntax: `cd [DIR]` (**c**hange **d**irectory). It prints nothing when it works, so check with `pwd`.\n\n```bash\ncd projects\npwd\n```\n```output\n/home/dev/projects\n```\nYou can go several levels in one go:\n\n```bash\ncd webapp/src\npwd\n```\n```output\n/home/dev/projects/webapp/src\n```\nOr jump anywhere with an absolute path:\n\n```bash\ncd /etc\npwd\n```\n```output\n/etc\n```\n\n### 4. Going up: cd ..\n```bash\ncd ~/projects/webapp/src\ncd ..\npwd\n```\n```output\n/home/dev/projects/webapp\n```\n- `..` is the parent. Chain them to go up more: `cd ../..` from `/home/dev/projects/webapp/src` lands in `/home/dev/projects`.\n- You can mix: `cd ../webapp/src` means \"up one, then down into webapp, then src\".\n\n### 5. Shortcuts home and back: cd, cd ~, cd -\n```bash\ncd /etc\ncd -\n```\n```output\n/home/dev\n```\n- `cd -` goes back to the **previous** folder (like a TV remote's \"last channel\") and prints where it went.\n- `cd ~` and plain `cd` (no argument) both take you home. `~` also works inside other paths: `ls ~/projects` lists `webapp` from anywhere.\n\n## Try it now\n1. Open a terminal and run `pwd`. You should see `/home/<your-username>`. Then run `ls` and `ls -F`.\n2. Build the practice tree with `mkdir -p ~/projects/webapp/src` (you'll learn `mkdir` properly on Day 07, it only creates empty folders). Then `cd ~/projects` and check your prompt and `pwd`.\n3. Using **relative** paths only: `cd webapp/src`, then `cd ..`, then `cd ../..`. Run `pwd` after each step and predict the answer before pressing Enter.\n4. Using an **absolute** path: `cd /etc`, `pwd`, then `cd -` to jump back. Then `cd` alone to go home.\n5. Without moving, run `ls /`, `ls ~/projects` and `ls /media`. The last one is where USB drives usually appear (tomorrow's topic).\n\n## Common mistakes\n- **Spaces in names.** `cd my docs` gives `-bash: cd: too many arguments` because the space splits it into two arguments. Use quotes: `cd \"my docs\"`.\n- **Case and typos.** `cd projects` fails with `No such file or directory` when the folder is `Projects`. Desktop home folders start with a capital letter (`Documents`, `Desktop`). And `cd app.py` fails with `Not a directory`: you can only `cd` into folders.\n- **Relative vs absolute mix-up.** `cd /projects` (leading slash) looks for `projects` at the root, not in your home. Drop the slash or use `~/projects`.\n- **Backslashes from Windows habits.** Linux uses forward slashes. `cd projects\\webapp` fails with `No such file or directory` because bash treats `\\` as a special character and drops it. Use `cd projects/webapp`.\n\n## Cheat sheet\n| Command | What it does |\n|---|---|\n| `pwd` | Print the folder you're in (absolute path) |\n| `ls PATH` | List a folder without moving there |\n| `ls -F` | Mark folders with a trailing / |\n| `cd PATH` | Move into a folder (relative or absolute) |\n| `cd ..` | Up one level (`../..` for two) |\n| `cd` / `cd ~` | Go to your home folder |\n| `cd -` | Back to the previous folder |\n| `/` · `.` · `..` · `~` | Root · here · parent · home |\n"
+  },
+  "quiz": [
+    {
+      "type": "mcq",
+      "q": "You're in `/home/dev/projects/webapp`. Where does `cd ../..` take you?",
+      "options": [
+        "/home",
+        "/home/dev",
+        "/home/dev/projects",
+        "/"
+      ],
+      "answer": 1,
+      "explain": "Up to /home/dev/projects, then up to /home/dev."
+    },
+    {
+      "type": "mcq",
+      "q": "Which of these is a relative path?",
+      "options": [
+        "/etc/hosts",
+        "~/projects",
+        "projects/webapp",
+        "/home/dev"
+      ],
+      "answer": 2,
+      "explain": "It doesn't start with `/` (or `~`), so it's read from where you stand."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that prints the folder you're currently in.",
+      "accept": [
+        "pwd"
+      ],
+      "explain": "`pwd` = print working directory."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that jumps back to the previous folder you were in.",
+      "accept": [
+        "cd -"
+      ],
+      "explain": "`cd -` returns to the previous folder and prints it."
+    },
+    {
+      "type": "mcq",
+      "q": "`cd my docs` fails with \"too many arguments\". What's the fix?",
+      "options": [
+        "cd my-docs",
+        "cd \"my docs\"",
+        "cd /my docs",
+        "cd my\\docs"
+      ],
+      "answer": 1,
+      "explain": "Quote names with spaces so bash sees one argument."
+    },
+    {
+      "type": "mcq",
+      "q": "In WSL, what's the Linux path to `C:\\Users`?",
+      "options": [
+        "C:/Users",
+        "/c/Users",
+        "/mnt/c/Users",
+        "/windows/Users"
+      ],
+      "answer": 2,
+      "explain": "WSL mounts the C: drive at `/mnt/c`.",
+      "tracks": [
+        "wsl"
+      ]
+    }
+  ]
+}

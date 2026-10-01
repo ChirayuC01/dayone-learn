@@ -1,0 +1,79 @@
+{
+  "day": 7,
+  "module": 2,
+  "title": "Creating files and folders",
+  "content": {
+    "wsl": "## Yesterday in 30 seconds\nYou reviewed Module 1: `pwd` shows where you are, `ls` shows what's there, `cd` moves you (absolute paths start with `/`, relative ones don't), and your own files belong under `~` rather than `/mnt/c`.\n\n## Why this matters\nEvery project starts as an empty tree of folders and files: `src/`, `tests/`, a `README.md`, a `.env`. Today you learn to build that tree in two or three commands instead of clicking through Explorer.\n\n## The concept\nA **directory** is Linux's word for a folder. Two commands create things:\n- `touch` makes an **empty file**. If the file already exists, it leaves the contents alone and just updates its \"last modified\" time (that's where the name comes from: it *touches* the file).\n- `mkdir` (make directory) makes a **folder**. By default it creates only the last folder in the path, so every parent must already exist. `mkdir -p` creates any missing parents and stays quiet if the folder is already there.\n\nAnalogy: `mkdir` is building one room and expects the house to be there. `mkdir -p` builds the house, the floor and the room in one go.\n\n> 🧪 All outputs below are real, from Ubuntu 24.04 as a normal user called `dev`, inside `~/playground`. Your username, dates and times will differ.\n\n## Commands\n\n### 1 · touch — create an empty file\n```bash\ntouch notes.txt\nls -l\n```\n```output\ntotal 0\n-rw-rw-r-- 1 dev dev 0 Sep 30 23:15 notes.txt\n```\n- `touch FILE` creates the file if it's missing. It prints nothing on success, which is normal in Linux: silence means it worked.\n- The `0` before the date is the size in bytes. The file exists but is empty.\n- You can create several at once: `touch a.txt b.txt c.txt`.\n\n### 2 · touch on an existing file — update the timestamp\n```bash\nls -l --time-style=+\"%b %e %H:%M:%S\" notes.txt\ntouch notes.txt\nls -l --time-style=+\"%b %e %H:%M:%S\" notes.txt\n```\n```output\n-rw-rw-r-- 1 dev dev 0 Sep 30 23:15:37 notes.txt\n-rw-rw-r-- 1 dev dev 0 Sep 30 23:15:45 notes.txt\n```\n- The `--time-style` option only makes `ls` show seconds so you can see the change. You don't need to memorise it.\n- `touch` never empties a file. A file containing `hello` still contains `hello` afterwards.\n\n### 3 · mkdir — create a folder\n```bash\nmkdir projects\nls -F\n```\n```output\na.txt  b.txt  c.txt  notes.txt  projects/\n```\n- `ls -F` adds `/` to folders, so you can tell `projects/` apart from files.\n- Running `mkdir projects` a second time fails: `mkdir: cannot create directory ‘projects’: File exists`.\n\n### 4 · mkdir -p — create a whole path, parents included\n```bash\nmkdir app/src/utils\nmkdir -p app/src/utils\nls -R app\n```\n```output\nmkdir: cannot create directory ‘app/src/utils’: No such file or directory\napp:\nsrc\n\napp/src:\nutils\n\napp/src/utils:\n```\n- Without `-p`, `mkdir` fails because `app` and `app/src` don't exist yet.\n- `-p` (\"parents\") creates `app`, then `app/src`, then `app/src/utils`. Run it again and it succeeds silently, so it's safe in scripts.\n- `ls -R` lists **recursively**: the folder, then everything inside it, level by level.\n\n### 5 · mkdir -v — see what was created\n```bash\nmkdir -pv web/css web/js\n```\n```output\nmkdir: created directory 'web'\nmkdir: created directory 'web/css'\nmkdir: created directory 'web/js'\n```\n- `-v` means **verbose**: print a line for each folder made. `-pv` is `-p` and `-v` combined, like `-tr` on Day 06.\n- Two paths in one command: `mkdir` takes as many arguments as you give it.\n\n## Try it now (in WSL)\n1. Go home and make a practice area: `cd`, then `mkdir playground`, then `cd playground` and `pwd`. You should see `/home/<you>/playground`.\n2. Create two empty files with one command: `touch notes.txt todo.txt`. Check with `ls -l` that both are 0 bytes.\n3. Build a project skeleton in one command: `mkdir -p myapp/src/components myapp/tests`. Check it with `ls -R myapp`.\n4. Add files inside it without `cd`-ing: `touch myapp/README.md myapp/src/index.js`. Then run `ls -F myapp` and `ls myapp/src`.\n5. See the difference yourself: run `mkdir myapp` (error), then `mkdir -p myapp` (silent). Then run `ls -l notes.txt`, wait a minute, `touch notes.txt`, and run `ls -l notes.txt` again to watch the time change.\n\n## Common mistakes\n- **Spaces in names.** `touch my file.txt` creates **two** files, `my` and `file.txt`, because the space splits the arguments. Use `touch \"my file.txt\"`, or better, avoid spaces: `my-file.txt`.\n- **touch can't create folders.** `touch newdir/x.txt` fails with `touch: cannot touch 'newdir/x.txt': No such file or directory` when `newdir` doesn't exist. Run `mkdir -p newdir` first. There's no `touch -p`.\n- **WSL: where you create things matters.** Make projects under `~` (for example `~/projects`), not under `/mnt/c/...`. Files on the Windows drive are much slower for tools like git and npm, and Linux permissions don't behave normally there. To see your Linux folder in Windows Explorer, run `explorer.exe .` from inside it.\n\n## Cheat sheet\n| Command | What it does |\n|---|---|\n| `touch FILE` | Create an empty file, or update its time if it exists |\n| `touch a b c` | Create several files at once |\n| `mkdir DIR` | Create one folder (parent must exist) |\n| `mkdir -p a/b/c` | Create the whole path; no error if it exists |\n| `mkdir -pv DIR…` | Same, and print each folder created |\n| `ls -F` · `ls -R` | Mark folders with / · list everything inside, recursively |\n| `\"my file.txt\"` | Quote names with spaces |\n| `explorer.exe .` | WSL: open this folder in Windows Explorer |\n",
+    "linux": "## Yesterday in 30 seconds\nYou reviewed Module 1: `pwd` shows where you are, `ls` shows what's there, `cd` moves you (absolute paths start with `/`, relative ones don't), and your own files belong under `~`.\n\n## Why this matters\nEvery project starts as an empty tree of folders and files: `src/`, `tests/`, a `README.md`, a `.env`. Today you learn to build that tree in two or three commands instead of clicking through a file manager.\n\n## The concept\nA **directory** is Linux's word for a folder. Two commands create things:\n- `touch` makes an **empty file**. If the file already exists, it leaves the contents alone and just updates its \"last modified\" time (that's where the name comes from: it *touches* the file).\n- `mkdir` (make directory) makes a **folder**. By default it creates only the last folder in the path, so every parent must already exist. `mkdir -p` creates any missing parents and stays quiet if the folder is already there.\n\nAnalogy: `mkdir` is building one room and expects the house to be there. `mkdir -p` builds the house, the floor and the room in one go.\n\n> 🧪 All outputs below are real, from Ubuntu 24.04 as a normal user called `dev`, inside `~/playground`. `touch` and `mkdir` work the same on every distro. Your username, dates and times will differ.\n\n## Commands\n\n### 1 · touch — create an empty file\n```bash\ntouch notes.txt\nls -l\n```\n```output\ntotal 0\n-rw-rw-r-- 1 dev dev 0 Sep 30 23:15 notes.txt\n```\n- `touch FILE` creates the file if it's missing. It prints nothing on success, which is normal in Linux: silence means it worked.\n- The `0` before the date is the size in bytes. The file exists but is empty.\n- You can create several at once: `touch a.txt b.txt c.txt`.\n\n### 2 · touch on an existing file — update the timestamp\n```bash\nls -l --time-style=+\"%b %e %H:%M:%S\" notes.txt\ntouch notes.txt\nls -l --time-style=+\"%b %e %H:%M:%S\" notes.txt\n```\n```output\n-rw-rw-r-- 1 dev dev 0 Sep 30 23:15:37 notes.txt\n-rw-rw-r-- 1 dev dev 0 Sep 30 23:15:45 notes.txt\n```\n- The `--time-style` option only makes `ls` show seconds so you can see the change. You don't need to memorise it.\n- `touch` never empties a file. A file containing `hello` still contains `hello` afterwards.\n\n### 3 · mkdir — create a folder\n```bash\nmkdir projects\nls -F\n```\n```output\na.txt  b.txt  c.txt  notes.txt  projects/\n```\n- `ls -F` adds `/` to folders, so you can tell `projects/` apart from files.\n- Running `mkdir projects` a second time fails: `mkdir: cannot create directory ‘projects’: File exists`.\n\n### 4 · mkdir -p — create a whole path, parents included\n```bash\nmkdir app/src/utils\nmkdir -p app/src/utils\nls -R app\n```\n```output\nmkdir: cannot create directory ‘app/src/utils’: No such file or directory\napp:\nsrc\n\napp/src:\nutils\n\napp/src/utils:\n```\n- Without `-p`, `mkdir` fails because `app` and `app/src` don't exist yet.\n- `-p` (\"parents\") creates `app`, then `app/src`, then `app/src/utils`. Run it again and it succeeds silently, so it's safe in scripts.\n- `ls -R` lists **recursively**: the folder, then everything inside it, level by level.\n\n### 5 · mkdir -v — see what was created\n```bash\nmkdir -pv web/css web/js\n```\n```output\nmkdir: created directory 'web'\nmkdir: created directory 'web/css'\nmkdir: created directory 'web/js'\n```\n- `-v` means **verbose**: print a line for each folder made. `-pv` is `-p` and `-v` combined, like `-tr` on Day 06.\n- Two paths in one command: `mkdir` takes as many arguments as you give it.\n\n## Try it now\n1. Go home and make a practice area: `cd`, then `mkdir playground`, then `cd playground` and `pwd`. You should see `/home/<you>/playground`.\n2. Create two empty files with one command: `touch notes.txt todo.txt`. Check with `ls -l` that both are 0 bytes.\n3. Build a project skeleton in one command: `mkdir -p myapp/src/components myapp/tests`. Check it with `ls -R myapp`.\n4. Add files inside it without `cd`-ing: `touch myapp/README.md myapp/src/index.js`. Then run `ls -F myapp` and `ls myapp/src`.\n5. See the difference yourself: run `mkdir myapp` (error), then `mkdir -p myapp` (silent). Then run `xdg-open myapp` to see the tree you built in your file manager (desktop only).\n\n## Common mistakes\n- **Spaces in names.** `touch my file.txt` creates **two** files, `my` and `file.txt`, because the space splits the arguments. Use `touch \"my file.txt\"`, or better, avoid spaces: `my-file.txt`.\n- **touch can't create folders.** `touch newdir/x.txt` fails with `touch: cannot touch 'newdir/x.txt': No such file or directory` when `newdir` doesn't exist. Run `mkdir -p newdir` first. There's no `touch -p`.\n- **Creating things outside your home.** `mkdir /projects` or `touch /etc/test` fails with `Permission denied` as a normal user (Day 05). That's protection, not a bug. Keep your work under `~`, e.g. `~/projects`, and don't reach for `sudo` to force it.\n\n## Cheat sheet\n| Command | What it does |\n|---|---|\n| `touch FILE` | Create an empty file, or update its time if it exists |\n| `touch a b c` | Create several files at once |\n| `mkdir DIR` | Create one folder (parent must exist) |\n| `mkdir -p a/b/c` | Create the whole path; no error if it exists |\n| `mkdir -pv DIR…` | Same, and print each folder created |\n| `ls -F` · `ls -R` | Mark folders with / · list everything inside, recursively |\n| `\"my file.txt\"` | Quote names with spaces |\n| `xdg-open DIR` | Open a folder in the desktop file manager |\n"
+  },
+  "quiz": [
+    {
+      "type": "mcq",
+      "q": "`notes.txt` contains a shopping list. What does `touch notes.txt` do?",
+      "options": [
+        "Empties it",
+        "Deletes it",
+        "Only updates its modified time; contents stay",
+        "Opens it in an editor"
+      ],
+      "answer": 2,
+      "explain": "touch never changes contents; it creates missing files or bumps the timestamp."
+    },
+    {
+      "type": "mcq",
+      "q": "In an empty folder, `mkdir a/b/c` fails. Why?",
+      "options": [
+        "Folder names can't be single letters",
+        "`a` and `a/b` don't exist yet",
+        "You need sudo",
+        "mkdir can only make one folder per day"
+      ],
+      "answer": 1,
+      "explain": "Plain mkdir needs every parent to exist. Use `-p`."
+    },
+    {
+      "type": "cmd",
+      "q": "Type one command that creates `app/src/utils`, including any missing parents.",
+      "accept": [
+        "mkdir -p app/src/utils",
+        "mkdir --parents app/src/utils",
+        "mkdir -pv app/src/utils",
+        "mkdir -vp app/src/utils"
+      ],
+      "explain": "`-p` creates every missing parent and doesn't error if it already exists."
+    },
+    {
+      "type": "cmd",
+      "q": "Type one command that creates two empty files, `a.txt` and `b.txt`.",
+      "accept": [
+        "touch a.txt b.txt",
+        "touch b.txt a.txt"
+      ],
+      "explain": "touch takes as many arguments as you give it."
+    },
+    {
+      "type": "mcq",
+      "q": "What does `touch my notes.txt` create?",
+      "options": [
+        "One file called \"my notes.txt\"",
+        "Two files: `my` and `notes.txt`",
+        "An error",
+        "A folder called my"
+      ],
+      "answer": 1,
+      "explain": "The space splits the arguments. Quote it: `touch \"my notes.txt\"`."
+    },
+    {
+      "type": "mcq",
+      "q": "Which option makes mkdir print each folder it creates?",
+      "options": [
+        "-p",
+        "-R",
+        "-v",
+        "-F"
+      ],
+      "answer": 2,
+      "explain": "`-v` = verbose. `-pv` combines it with -p."
+    }
+  ]
+}

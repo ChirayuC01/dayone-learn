@@ -1,0 +1,98 @@
+{
+  "day": 2,
+  "module": 1,
+  "title": "WSL setup and the terminal",
+  "content": {
+    "wsl": "## Yesterday in 30 seconds\nLinux is a **kernel** (the core that talks to hardware). A **distribution** like Ubuntu is that kernel plus a shell, tools and a package manager. `uname -r` shows the kernel; `cat /etc/os-release` shows the distro.\n\n## Why this matters\nThe terminal is where you'll run git, build tools, servers and SSH sessions. Knowing how to open it, read the prompt and get unstuck is the base for every other lesson.\n\n## The concept\n**WSL (Windows Subsystem for Linux)** lets you run Ubuntu on Windows without a separate PC or dual boot. You install it once from PowerShell, then open \"Ubuntu\" like any other app.\n\n**The terminal vs the shell.** The *terminal* is the window (Windows Terminal, in your case). The *shell* is the program inside it that reads what you type and runs it. Ubuntu's default shell is **bash**. Analogy: the terminal is the browser tab; the shell is the web app running inside it.\n\n**The prompt** is the shell saying \"ready, type something\". Ubuntu's default prompt has four parts:\n\n```text\ndev@vm:~$\n│   │  │ └─ $ = normal user   (# = root, the admin account)\n│   │  └─── ~ = current folder (~ means your home folder)\n│   └────── vm = computer name (hostname)\n└────────── dev = your username\n```\n\nWhen you move to another folder, the middle part changes. After `cd /tmp` the prompt becomes `dev@vm:/tmp$`. (You'll learn `cd` on Day 04.)\n\n## Setup: installing Ubuntu on WSL\nThese steps run in **Windows PowerShell**, not Linux, so no example output is shown for them.\n\n1. Open **PowerShell as Administrator** (right-click Start → Terminal (Admin)) and run `wsl --install`. This turns on WSL and installs Ubuntu by default.\n2. **Restart Windows** when asked.\n3. Open **Ubuntu** from the Start menu. The first launch takes a minute, then asks you to create a **username and password**. These are Linux-only and don't need to match your Windows login.\n4. Back in PowerShell, `wsl -l -v` lists your installed distros and shows whether each uses WSL version 2. You want **2**.\n5. In Ubuntu, refresh the package list and install updates: `sudo apt update && sudo apt upgrade`. It asks for the password from step 3.\n\n> ⚠️ `sudo` runs a command as the administrator (root). It's needed here to install updates. Only use `sudo` when a lesson or trusted docs tell you to. Day 15 covers it properly, and Day 29 covers `apt`.\n\n## Commands\nThese are all safe: they only print information or tidy the screen. They were run as a normal user called `dev` on a machine called `vm`; yours will show your own username and computer name.\n\n### whoami\nPrints the username you're logged in as. Syntax: `whoami`\n\n```bash\nwhoami\n```\n```output\ndev\n```\n- Handy when you're not sure whether you're your normal user or root.\n\n### hostname\nPrints the computer's name, the part after `@` in your prompt.\n\n```bash\nhostname\n```\n```output\nvm\n```\n- In WSL this is usually your Windows PC's name.\n\n### echo $SHELL\nShows which shell you're using.\n\n```bash\necho $SHELL\n```\n```output\n/bin/bash\n```\n- `echo` prints whatever you give it. `$SHELL` is a *variable* holding the path to your shell; the `$` tells bash \"replace this with its value\". Variables get a full lesson on Day 41.\n\n### date\nPrints the current date and time.\n\n```bash\ndate\n```\n```output\nSat Sep 26 04:45:57 IST 2026\n```\n- `IST` is the time zone. In WSL, Ubuntu normally picks up your Windows time zone. If it shows `UTC`, that's a setting, not an error.\n\n### clear\nWipes the screen so you get a fresh prompt at the top. Nothing is deleted; it only clears the view.\n\n```bash\nclear\n```\n- There's no output: the screen just empties. Shortcut: **Ctrl+L** does the same.\n\n### exit\nCloses the shell. In WSL this closes the Ubuntu tab.\n\n```bash\nexit\n```\n- Also no output. Shortcut: **Ctrl+D** on an empty prompt.\n\n### Keys to know on day one\n- **↑ / ↓**: scroll through commands you've already typed, so you don't retype them.\n- **Tab**: auto-completes command and file names (more on Day 43).\n- **Ctrl+C**: stops the command that's running and gives you the prompt back. It does *not* copy.\n- **Copy / paste in Windows Terminal**: **Ctrl+Shift+C** and **Ctrl+Shift+V**, or select text and right-click.\n\n## Try it now (in WSL)\n1. Open Ubuntu. Read your prompt and name its four parts: username, hostname, folder, and the `$`.\n2. Run `whoami` and `hostname`. Check they match the first two parts of your prompt.\n3. Run `echo $SHELL` and confirm it says `/bin/bash`. Then run `date`.\n4. Press **↑** a few times to bring back earlier commands, and press Enter to re-run one. Then press **Ctrl+L** to clear the screen.\n5. Type `sleep 30` and press Enter (it just waits 30 seconds). Press **Ctrl+C** to stop it early, then close the tab with `exit`.\n\n## Common mistakes\n- **\"My password isn't typing!\"** When Linux asks for a password (for example after `sudo`), nothing appears on screen, not even `*`. It's still recording your keys. Type it and press Enter.\n- **Using Ctrl+C to copy.** In the terminal, Ctrl+C means \"stop\". Use Ctrl+Shift+C / Ctrl+Shift+V, or right-click.\n- **Looking for your Linux files in C:\\Users.** Your Ubuntu home folder is `/home/<username>` inside WSL, not your Windows user folder. In File Explorer it appears under **Linux → Ubuntu** in the sidebar. Day 05 covers how the two connect.\n\n## Cheat sheet\n| Command / key | What it does |\n|---|---|\n| `wsl --install` | (PowerShell, admin) install WSL + Ubuntu |\n| `wsl -l -v` | (PowerShell) list distros and WSL version |\n| `whoami` | Your username |\n| `hostname` | Computer name |\n| `echo $SHELL` | Which shell you're using |\n| `date` | Current date and time |\n| `clear` / Ctrl+L | Clear the screen |\n| `exit` / Ctrl+D | Close the shell |\n| Ctrl+C | Stop the running command |\n| ↑ / ↓, Tab | Previous commands, auto-complete |\n",
+    "linux": "## Yesterday in 30 seconds\nLinux is a **kernel** (the core that talks to hardware). A **distribution** like Ubuntu, Fedora or Arch is that kernel plus a shell, tools and a package manager. `uname -r` shows the kernel; `cat /etc/os-release` shows the distro.\n\n## Why this matters\nThe terminal is where you'll run git, build tools, servers and SSH sessions. Knowing how to open it, read the prompt and get unstuck is the base for every other lesson.\n\n## The concept\n\n### Ways to get a Linux system\n| Option | What it is | Good for |\n|---|---|---|\n| **Virtual machine** | Linux runs in a window on your current OS, using VirtualBox, VMware, GNOME Boxes or UTM. | Learning safely. You can take snapshots and undo mistakes. **Recommended for this course.** |\n| **Live USB** | Boot Linux from a USB stick without installing anything. | Trying a distro. Changes are usually lost on reboot. |\n| **Dual boot / full install** | Linux installed on the disk, chosen at startup. | Daily use with full hardware speed. Back up first. |\n| **Cloud VM** | A small server from a cloud provider, used over SSH. | Server practice. No desktop, terminal only. |\n\nFor a first distro, **Ubuntu**, **Fedora Workstation** or **Linux Mint** are the easiest. Everything in this course works on all three.\n\n### The terminal vs the shell\nThe *terminal* is the window (GNOME Terminal, Konsole, Alacritty…). The *shell* is the program inside it that reads what you type and runs it. Most distros use **bash** by default; a few use **zsh** or **fish**, which look similar for basic commands. Analogy: the terminal is the browser tab; the shell is the web app running inside it.\n\n### The prompt\nThe prompt is the shell saying \"ready, type something\". Ubuntu/Debian style:\n\n```text\ndev@vm:~$\n│   │  │ └─ $ = normal user   (# = root, the admin account)\n│   │  └─── ~ = current folder (~ means your home folder)\n│   └────── vm = computer name (hostname)\n└────────── dev = your username\n```\n\nFedora and Arch show the same information in a different shape: `[dev@vm ~]$`. When you move to another folder, the folder part changes, e.g. `dev@vm:/tmp$`. (You'll learn `cd` on Day 04.)\n\n## Setup: getting a system and updating it\n1. **Pick a way to run Linux** from the table above and install your distro. For a VM: install VirtualBox (or GNOME Boxes if you're already on Linux), download the distro's ISO file from its official site, create a VM with at least 2 CPUs, 4 GB RAM and 25 GB disk, and follow the installer.\n2. During install you create a **username and password**. Remember the password: you'll need it for admin tasks.\n3. **Open a terminal:** press **Ctrl+Alt+T** (works on Ubuntu, Mint and many others), or search \"Terminal\" in the app menu.\n4. **Install updates** with your family's package manager. It asks for your password:\n\n```bash\n# Debian / Ubuntu / Mint\nsudo apt update && sudo apt upgrade\n\n# Fedora / RHEL / Rocky\nsudo dnf upgrade\n\n# Arch / Manjaro\nsudo pacman -Syu\n```\n\n> ⚠️ `sudo` runs a command as the administrator (root). It's needed here to install updates. Only use `sudo` when a lesson or trusted docs tell you to. Day 15 covers it properly, and Day 29 covers package managers.\n\n## Commands\nThese are all safe: they only print information or tidy the screen. They were run as a normal user called `dev` on a machine called `vm`.\n\n### whoami\nPrints the username you're logged in as.\n\n```bash\nwhoami\n```\n```output\ndev\n```\n- Handy when you're not sure whether you're your normal user or root.\n\n### hostname\nPrints the computer's name, the part after `@` in your prompt.\n\n```bash\nhostname\n```\n```output\nvm\n```\n- You chose this during install. On a cloud VM it's often something like `ip-172-31-5-10`.\n- On minimal Arch installs `hostname` may be missing; `cat /etc/hostname` shows the same thing.\n\n### echo $SHELL\nShows which shell you're using.\n\n```bash\necho $SHELL\n```\n```output\n/bin/bash\n```\n- `echo` prints whatever you give it. `$SHELL` is a *variable* holding the path to your shell; the `$` tells bash \"replace this with its value\". Variables get a full lesson on Day 41.\n- If it says `/bin/zsh` or `/usr/bin/fish`, your distro uses a different shell. Type `bash` and press Enter to switch to bash for this course.\n\n### date\n```bash\ndate\n```\n```output\nSat Sep 26 04:45:57 IST 2026\n```\n- `IST` is the time zone you picked during install. If it shows `UTC`, that's a setting, not an error.\n\n### clear\nWipes the screen so you get a fresh prompt at the top. Nothing is deleted.\n\n```bash\nclear\n```\n- No output: the screen just empties. Shortcut: **Ctrl+L**.\n\n### exit\nCloses the shell, and with it the terminal window or tab.\n\n```bash\nexit\n```\n- No output. Shortcut: **Ctrl+D** on an empty prompt.\n\n### Keys to know on day one\n- **↑ / ↓**: scroll through commands you've already typed.\n- **Tab**: auto-completes command and file names (more on Day 43).\n- **Ctrl+C**: stops the command that's running. It does *not* copy.\n- **Copy / paste in the terminal**: **Ctrl+Shift+C** and **Ctrl+Shift+V** in most Linux terminals. Selecting text and middle-clicking also pastes.\n\n## Try it now\n1. Open a terminal. Read your prompt and name its parts: username, hostname, folder, and the `$`.\n2. Run `whoami` and `hostname`. Check they match your prompt.\n3. Run `echo $SHELL` and `date`. If your shell isn't bash, type `bash` to switch.\n4. Press **↑** a few times to bring back earlier commands, and press Enter to re-run one. Then press **Ctrl+L** to clear the screen.\n5. Type `sleep 30` and press Enter (it just waits 30 seconds). Press **Ctrl+C** to stop it early, then close the terminal with `exit`.\n\n## Common mistakes\n- **\"My password isn't typing!\"** When Linux asks for a password (for example after `sudo`), nothing appears on screen, not even `*`. It's still recording your keys. Type it and press Enter.\n- **Using Ctrl+C / Ctrl+V to copy and paste.** In the terminal, Ctrl+C means \"stop\". Use Ctrl+Shift+C / Ctrl+Shift+V.\n- **Using the wrong family's update command.** `apt` on Fedora gives `command not found`. Check `cat /etc/os-release` and use `apt`, `dnf` or `pacman` to match.\n\n## Cheat sheet\n| Command / key | What it does |\n|---|---|\n| Ctrl+Alt+T | Open a terminal (most desktops) |\n| `sudo apt update && sudo apt upgrade` | Update Debian / Ubuntu |\n| `sudo dnf upgrade` | Update Fedora / RHEL |\n| `sudo pacman -Syu` | Update Arch |\n| `whoami` · `hostname` | Your username · computer name |\n| `echo $SHELL` | Which shell you're using |\n| `date` | Current date and time |\n| `clear` / Ctrl+L | Clear the screen |\n| `exit` / Ctrl+D | Close the shell |\n| Ctrl+C · Ctrl+Shift+C / V | Stop a command · copy / paste |\n"
+  },
+  "quiz": [
+    {
+      "type": "mcq",
+      "q": "What's the difference between the terminal and the shell?",
+      "options": [
+        "They're the same thing",
+        "The terminal is the window; the shell (bash) reads and runs your commands inside it",
+        "The shell is the window; the terminal runs commands",
+        "The terminal is only for root"
+      ],
+      "answer": 1,
+      "explain": "Terminal = the window. Shell = the program inside it (bash) that runs what you type."
+    },
+    {
+      "type": "mcq",
+      "q": "In the prompt `priya@laptop:~$`, what does `~` mean?",
+      "options": [
+        "The root folder /",
+        "You're the admin",
+        "You're in your home folder",
+        "The command is still running"
+      ],
+      "answer": 2,
+      "explain": "`~` is shorthand for your home folder, `/home/priya`."
+    },
+    {
+      "type": "mcq",
+      "q": "A command is stuck. What do you press to stop it?",
+      "options": [
+        "Ctrl+Z",
+        "Ctrl+C",
+        "Ctrl+L",
+        "Esc"
+      ],
+      "answer": 1,
+      "explain": "Ctrl+C stops the running command. In the terminal it does not copy."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that prints the username you're logged in as.",
+      "accept": [
+        "whoami"
+      ],
+      "explain": "`whoami` prints your username, e.g. `dev`."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that shows which shell you're using (via the SHELL variable).",
+      "accept": [
+        "echo $SHELL",
+        "echo \"$SHELL\"",
+        "echo ${SHELL}"
+      ],
+      "explain": "`echo $SHELL` prints something like `/bin/bash`."
+    },
+    {
+      "type": "mcq",
+      "q": "Where is your Ubuntu home folder in WSL?",
+      "options": [
+        "C:\\Users\\<you>",
+        "/home/<you> inside Linux",
+        "/mnt/c/home",
+        "Program Files"
+      ],
+      "answer": 1,
+      "explain": "Your Linux home is `/home/<you>`; Windows Explorer shows it under Linux → Ubuntu.",
+      "tracks": [
+        "wsl"
+      ]
+    },
+    {
+      "type": "mcq",
+      "q": "Which command updates a Fedora system?",
+      "options": [
+        "sudo apt upgrade",
+        "sudo pacman -Syu",
+        "sudo dnf upgrade",
+        "sudo update"
+      ],
+      "answer": 2,
+      "explain": "Fedora/RHEL use `dnf`. `apt` is Debian/Ubuntu, `pacman` is Arch.",
+      "tracks": [
+        "linux"
+      ]
+    }
+  ],
+  "trackTitles": {
+    "linux": "Getting Linux and the terminal"
+  }
+}

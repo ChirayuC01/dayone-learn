@@ -1,0 +1,82 @@
+{
+  "day": 1,
+  "module": 1,
+  "title": "What Linux is",
+  "content": {
+    "wsl": "## Why this matters\nMost servers, cloud VMs, Docker containers and CI runners you will deploy to run Linux. Knowing what it actually is makes every later command, error message and Stack Overflow answer easier to understand.\n\n## The concept\n**Linux is a kernel.** The kernel is the core program that talks to the hardware. It decides which program gets the CPU, hands out memory, reads and writes the disk, and talks to the network card. Your apps never touch hardware directly; they ask the kernel.\n\nAnalogy: the kernel is like a runtime (the JVM, or Node's event loop plus libuv) sitting between your code and the machine. You rarely see it, but everything goes through it.\n\nA kernel alone isn't usable. You also need a shell to type commands into, basic tools like `ls` and `cp`, and a package manager. **A distribution (\"distro\")** is the kernel plus all of that, packaged and tested together. Ubuntu, Debian, Fedora, Arch and Alpine are distros. They share the same kernel family but differ in package manager, release cycle and defaults.\n\n```text\nYou                 -> type commands\nShell (bash)        -> reads and runs your commands\nPrograms & tools    -> ls, git, python, node...\nLinux kernel        -> CPU, memory, disk, network\nHardware            -> (in WSL, a lightweight VM)\n```\n\n**Why developers use it:** it's free and open source, it runs most of the internet's servers, the tooling (git, compilers, Docker) is built for it first, and the terminal lets you automate almost anything with a script.\n\n> 🪟 **WSL note:** WSL 2 runs a real Linux kernel (built by Microsoft) inside a small, lightweight virtual machine on Windows. Your Ubuntu there is a real distro on a real kernel, not an emulation.\n\n## Commands\nToday's commands only *look* at your system. None of them change anything, so they're all safe to run.\n\n### uname\nPrints the name of the kernel. Syntax: `uname [options]`\n\n```bash\nuname\n```\n```output\nLinux\n```\n- `uname` is short for \"unix name\". With no options it prints just the kernel name.\n\n### uname -r\nPrints the kernel *release* (its version).\n\n```bash\nuname -r\n```\n```output\n6.18.44-fc-v37\n```\n- `-r` is an option (a \"flag\") meaning \"release\". Options change what a command does; Day 03 covers them properly.\n- In WSL your string will be different and will contain `microsoft-standard-WSL2`, meaning Microsoft built that kernel.\n\n### uname -a\nPrints *all* the kernel information on one line.\n\n```bash\nuname -a\n```\n```output\nLinux vm 6.18.44-fc-v37 #1 SMP PREEMPT_DYNAMIC @0 x86_64 x86_64 x86_64 GNU/Linux\n```\n- `Linux`: kernel name. `vm`: the machine's hostname. `6.18.44-fc-v37`: kernel release.\n- `x86_64`: CPU architecture (64-bit Intel/AMD). `GNU/Linux`: the OS, i.e. the Linux kernel plus GNU tools.\n\n### cat /etc/os-release\nShows which *distribution* you're on. `uname` tells you about the kernel; this file tells you about the distro.\n\n```bash\ncat /etc/os-release\n```\n```output\nPRETTY_NAME=\"Ubuntu 24.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.4 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\n```\n- `cat` prints a file's contents to the screen (Day 10 goes deeper).\n- `/etc/os-release` is a plain text file every modern distro ships. `ID_LIKE=debian` means Ubuntu is based on Debian.\n- **LTS** = Long Term Support: a release that gets updates for years.\n\n### lsb_release -a\nA friendlier summary of the distro.\n\n```bash\nlsb_release -a\n```\n```output\nDistributor ID:\tUbuntu\nDescription:\tUbuntu 24.04.4 LTS\nRelease:\t24.04\nCodename:\tnoble\n```\n- `-a` means \"all fields\". Some systems also print \"No LSB modules are available.\" That's harmless.\n\n## Try it now (in WSL)\n1. Open **Ubuntu** from the Start menu (or type `wsl` in PowerShell). You'll see a prompt ending in `$`. That's the shell waiting for you. (No WSL yet? Just read along; Day 02 covers setup.)\n2. Run `uname`. Confirm it says `Linux`, even though you're on a Windows PC.\n3. Run `uname -r` and find the word `microsoft` in the output. That proves you're on WSL's kernel.\n4. Run `cat /etc/os-release` and note your Ubuntu version and codename.\n5. Run `uname -a` and `lsb_release -a`, then say which parts describe the *kernel* and which describe the *distro*.\n\n## Common mistakes\n- **Calling Ubuntu \"a different Linux\".** Ubuntu and Fedora use the same Linux kernel family; they differ in packaging and defaults. That's why most Linux skills carry over between distros.\n- **Wrong capitalisation.** Linux is case-sensitive. `Uname` or `UNAME` gives \"command not found\"; it must be `uname`.\n- **Running Linux commands in PowerShell.** In WSL, check the prompt is Ubuntu's (shows `user@machine` and ends in `$`), not `PS C:\\>`. Some commands exist in both with different behaviour.\n\n## Cheat sheet\n| Command | What it shows |\n|---|---|\n| `uname` | Kernel name (Linux) |\n| `uname -r` | Kernel release / version |\n| `uname -a` | All kernel info: hostname, version, architecture |\n| `cat /etc/os-release` | Distro name, version, codename |\n| `lsb_release -a` | Short distro summary |\n",
+    "linux": "## Why this matters\nMost servers, cloud VMs, Docker containers and CI runners you will deploy to run Linux. Knowing what it actually is makes every later command, error message and Stack Overflow answer easier to understand.\n\n## The concept\n**Linux is a kernel.** The kernel is the core program that talks to the hardware. It decides which program gets the CPU, hands out memory, reads and writes the disk, and talks to the network card. Your apps never touch hardware directly; they ask the kernel.\n\nAnalogy: the kernel is like a runtime (the JVM, or Node's event loop plus libuv) sitting between your code and the machine. You rarely see it, but everything goes through it.\n\nA kernel alone isn't usable. You also need a shell to type commands into, basic tools like `ls` and `cp`, and a package manager. **A distribution (\"distro\")** is the kernel plus all of that, packaged and tested together.\n\n```text\nYou                 -> type commands\nShell (bash)        -> reads and runs your commands\nPrograms & tools    -> ls, git, python, node...\nLinux kernel        -> CPU, memory, disk, network\nHardware            -> your laptop, a VM, or a server\n```\n\n### The main distro families\nThousands of distros exist, but most belong to a few families. Skills carry over between all of them; the biggest day-to-day difference is the **package manager** (the tool that installs software).\n\n| Family | Examples | Package manager | Where you'll meet it |\n|---|---|---|---|\n| Debian | Debian, Ubuntu, Linux Mint, Pop!_OS | `apt` | Most tutorials, cloud VMs, desktops |\n| Red Hat | Fedora, RHEL, Rocky Linux, AlmaLinux | `dnf` | Enterprise servers |\n| Arch | Arch Linux, Manjaro, EndeavourOS | `pacman` | Enthusiast desktops |\n| Alpine | Alpine Linux | `apk` | Tiny Docker images |\n\n**Why developers use it:** it's free and open source, it runs most of the internet's servers, the tooling (git, compilers, Docker) is built for it first, and the terminal lets you automate almost anything with a script.\n\n## Commands\nToday's commands only *look* at your system. None of them change anything, so they're all safe to run. Outputs come from an Ubuntu 24.04 machine; yours will show your own distro and versions.\n\n### uname\nPrints the name of the kernel. Syntax: `uname [options]`\n\n```bash\nuname\n```\n```output\nLinux\n```\n- `uname` is short for \"unix name\". With no options it prints just the kernel name. This is the same on every distro.\n\n### uname -r\nPrints the kernel *release* (its version).\n\n```bash\nuname -r\n```\n```output\n6.18.44-fc-v37\n```\n- `-r` is an option (a \"flag\") meaning \"release\". Options change what a command does; Day 03 covers them properly.\n- Each distro adds its own suffix: Ubuntu looks like `6.8.0-45-generic`, Fedora like `6.10.6-200.fc40.x86_64`, Arch like `6.10.10-arch1-1`.\n\n### uname -a\nPrints *all* the kernel information on one line.\n\n```bash\nuname -a\n```\n```output\nLinux vm 6.18.44-fc-v37 #1 SMP PREEMPT_DYNAMIC @0 x86_64 x86_64 x86_64 GNU/Linux\n```\n- `Linux`: kernel name. `vm`: the machine's hostname. `6.18.44-fc-v37`: kernel release.\n- `x86_64`: CPU architecture (64-bit Intel/AMD). On a Raspberry Pi or ARM server you'd see `aarch64`. `GNU/Linux`: the Linux kernel plus GNU tools.\n\n### cat /etc/os-release\nShows which *distribution* you're on. `uname` tells you about the kernel; this file tells you about the distro. **Every modern distro has it**, so it's the most reliable way to check.\n\n```bash\ncat /etc/os-release\n```\n```output\nPRETTY_NAME=\"Ubuntu 24.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.4 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\n```\n- `cat` prints a file's contents to the screen (Day 10 goes deeper).\n- `ID_LIKE` names the family: `debian` here. On Rocky Linux you'd see `ID_LIKE=\"rhel centos fedora\"`. Arch has no `ID_LIKE` because it's its own family.\n- **LTS** = Long Term Support: a release that gets updates for years.\n\n### lsb_release -a\nA friendlier summary of the distro.\n\n```bash\nlsb_release -a\n```\n```output\nDistributor ID:\tUbuntu\nDescription:\tUbuntu 24.04.4 LTS\nRelease:\t24.04\nCodename:\tnoble\n```\n- `-a` means \"all fields\".\n- Not every distro installs it. On Fedora or Arch you may get `lsb_release: command not found`. That's fine: use `cat /etc/os-release` instead.\n\n## Try it now\n1. Open a terminal. On most desktops press **Ctrl+Alt+T**, or search for \"Terminal\" in your app menu. (No Linux machine yet? Just read along; Day 02 covers your options.)\n2. Run `uname`. Confirm it says `Linux`.\n3. Run `uname -r` and look at the suffix. Can you guess your distro from it?\n4. Run `cat /etc/os-release`. Find `NAME`, `VERSION_ID` and, if present, `ID_LIKE` to see which family you're in.\n5. Run `uname -a` and `lsb_release -a`, then say which parts describe the *kernel* and which describe the *distro*.\n\n## Common mistakes\n- **Calling Ubuntu \"a different Linux\".** Ubuntu and Fedora use the same Linux kernel family; they differ in packaging and defaults. That's why most Linux skills carry over between distros.\n- **Wrong capitalisation.** Linux is case-sensitive. `Uname` or `UNAME` gives \"command not found\"; it must be `uname`.\n- **Copying install commands for the wrong family.** A tutorial's `sudo apt install ...` won't work on Fedora (`dnf`) or Arch (`pacman`). Check your family with `cat /etc/os-release` first.\n\n## Cheat sheet\n| Command | What it shows |\n|---|---|\n| `uname` | Kernel name (Linux) |\n| `uname -r` | Kernel release / version |\n| `uname -a` | All kernel info: hostname, version, architecture |\n| `cat /etc/os-release` | Distro name, version, family (works everywhere) |\n| `lsb_release -a` | Short distro summary (not always installed) |\n| `apt` / `dnf` / `pacman` | Package manager for Debian / Red Hat / Arch families |\n"
+  },
+  "quiz": [
+    {
+      "type": "mcq",
+      "q": "What is Linux, strictly speaking?",
+      "options": [
+        "A complete operating system with a desktop",
+        "A kernel: the core program that manages hardware",
+        "A package manager",
+        "A terminal app"
+      ],
+      "answer": 1,
+      "explain": "Linux is the kernel. A distribution like Ubuntu adds the shell, tools and package manager around it."
+    },
+    {
+      "type": "mcq",
+      "q": "What is a distribution (distro)?",
+      "options": [
+        "A different kernel per company",
+        "The kernel plus a shell, tools, a package manager and defaults, packaged together",
+        "A paid version of Linux",
+        "A virtual machine image"
+      ],
+      "answer": 1,
+      "explain": "Ubuntu, Fedora and Arch all share the Linux kernel family; they differ in packaging and defaults."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that prints only the kernel release (version).",
+      "accept": [
+        "uname -r",
+        "uname --kernel-release"
+      ],
+      "explain": "`uname -r` prints the release, e.g. `6.8.0-45-generic`."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that prints the distro details from the standard file every modern distro ships.",
+      "accept": [
+        "cat /etc/os-release"
+      ],
+      "explain": "`/etc/os-release` holds NAME, VERSION_ID, ID_LIKE and more."
+    },
+    {
+      "type": "mcq",
+      "q": "In WSL, what word in `uname -r` shows you're on Microsoft's kernel?",
+      "options": [
+        "generic",
+        "microsoft",
+        "windows",
+        "wsl-kernel"
+      ],
+      "answer": 1,
+      "explain": "WSL 2's kernel release contains `microsoft-standard-WSL2`.",
+      "tracks": [
+        "wsl"
+      ]
+    },
+    {
+      "type": "mcq",
+      "q": "`/etc/os-release` shows `ID_LIKE=\"rhel centos fedora\"`. Which package manager will you most likely use?",
+      "options": [
+        "apt",
+        "pacman",
+        "dnf",
+        "apk"
+      ],
+      "answer": 2,
+      "explain": "That's the Red Hat family, which uses `dnf`.",
+      "tracks": [
+        "linux"
+      ]
+    }
+  ]
+}
