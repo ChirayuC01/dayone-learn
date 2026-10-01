@@ -31,12 +31,27 @@ npm run dev                     # http://localhost:3000
 app/                  Next.js routes (React Server Components by default)
 lib/                  business rules as pure, unit-tested functions, plus DB services
   ingest/             schema.ts (Zod) · normalize.ts (pure rules) · service.ts (transactional upserts)
+  content/            outline.ts (titles, tracks, syllabus states) · theme.ts (per-course accent) · queries.ts
+  markdown/           remark-details.ts (the only raw HTML allowed in lessons: <details>/<summary>)
+components/           Markdown renderer, reader sidebar/drawer, track toggle, cards
 prisma/               schema.prisma and migrations
 scripts/seed.ts       loads reference/seed/ through lib/ingest/service.ts (the same code the API uses)
 reference/            prototype.html (design system source) and seed content
 ```
 
 Code under `lib/` that scripts import uses relative imports with explicit `.ts` extensions and receives its Prisma client as an argument, so plain Node can run it without a bundler.
+
+## Pages (so far)
+
+| Route | What it shows |
+|---|---|
+| `/` | Landing: catalogue and how it works |
+| `/courses` | Catalogue cards (accent, icon, days published, learners) |
+| `/courses/[slug]` | Overview, track picker, syllabus by module (published / upcoming) |
+| `/learn/[slug]/day/[nn]` | Lesson reader with sidebar, track toggle, module-test card on review days, pager |
+| `/learn/[slug]/module/[n]` | Module test page (questions arrive in phase 4) |
+
+Lesson Markdown is rendered on the server with GFM and `rehype-sanitize`. ` ```bash ` blocks get a `$` prompt per command line and a copy button, ` ```output ` blocks a dashed box, and any other fence a diagram box. Raw HTML is dropped except `<details>`/`<summary>`. Until sign-in exists, the chosen track is stored in a per-course cookie.
 
 ## Seed data format
 
