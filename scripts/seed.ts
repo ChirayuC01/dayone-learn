@@ -12,6 +12,7 @@ import { courseSchema, lessonSchema, moduleTestSchema, type CourseInput } from "
 import { upsertCourse, upsertLesson, upsertModuleTest, withIngestLog } from "../lib/ingest/service.ts";
 
 const SEED_DIR = join(import.meta.dirname, "..", "reference", "seed");
+ 
 
 // Presentation fields the exported course.json doesn't carry. Values in course.json win.
 const COURSE_DEFAULTS: Record<string, Partial<CourseInput>> = {
