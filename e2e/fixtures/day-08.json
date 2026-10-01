@@ -1,0 +1,79 @@
+{
+  "day": 8,
+  "module": 2,
+  "title": "Copying, moving, and renaming",
+  "content": {
+    "wsl": "## Yesterday in 30 seconds\n`touch` creates empty files, `mkdir` creates folders and `mkdir -p` creates a whole path at once.\n\n## Why this matters\nCopying and moving files is most of what you do in a terminal: backing up a config before editing it, renaming a script, tidying a downloads folder.\n\n## The concept\n**`cp SOURCE DEST`** copies. The original stays where it is. **`mv SOURCE DEST`** moves, and because a rename is just a move inside the same folder, `mv` is also how you rename.\n\nBoth overwrite an existing destination without asking. Add `-i` to be asked first.\n\n## Commands\n\n### Copy a file\n```bash\ncp notes.txt notes.bak\nls\n```\n```output\nnotes.bak  notes.txt\n```\n\n### Copy a folder with -r\n```bash\ncp -r project project-backup\n```\n\n### Rename with mv\n```bash\nmv notes.bak old-notes.txt\nls\n```\n```output\nnotes.txt  old-notes.txt\n```\n\n> ⚠️ `cp` and `mv` replace an existing file with the same name silently. Use `cp -i` and `mv -i` while you're learning.\n\n## Cheat sheet\n| Command | What it does |\n|---|---|\n| `cp a b` | Copy file a to b |\n| `cp -r dir1 dir2` | Copy a folder and everything in it |\n| `mv a b` | Move or rename a to b |\n| `mv -i a b` | Ask before overwriting |\n\n> 💡 On WSL, keep your work under `~` rather than `/mnt/c`: copies inside the Linux filesystem are much faster.\n",
+    "linux": "## Yesterday in 30 seconds\n`touch` creates empty files, `mkdir` creates folders and `mkdir -p` creates a whole path at once.\n\n## Why this matters\nCopying and moving files is most of what you do in a terminal: backing up a config before editing it, renaming a script, tidying a downloads folder.\n\n## The concept\n**`cp SOURCE DEST`** copies. The original stays where it is. **`mv SOURCE DEST`** moves, and because a rename is just a move inside the same folder, `mv` is also how you rename.\n\nBoth overwrite an existing destination without asking. Add `-i` to be asked first.\n\n## Commands\n\n### Copy a file\n```bash\ncp notes.txt notes.bak\nls\n```\n```output\nnotes.bak  notes.txt\n```\n\n### Copy a folder with -r\n```bash\ncp -r project project-backup\n```\n\n### Rename with mv\n```bash\nmv notes.bak old-notes.txt\nls\n```\n```output\nnotes.txt  old-notes.txt\n```\n\n> ⚠️ `cp` and `mv` replace an existing file with the same name silently. Use `cp -i` and `mv -i` while you're learning.\n\n## Cheat sheet\n| Command | What it does |\n|---|---|\n| `cp a b` | Copy file a to b |\n| `cp -r dir1 dir2` | Copy a folder and everything in it |\n| `mv a b` | Move or rename a to b |\n| `mv -i a b` | Ask before overwriting |\n"
+  },
+  "quiz": [
+    {
+      "type": "mcq",
+      "q": "After `cp a.txt b.txt`, what happens to `a.txt`?",
+      "options": [
+        "It is deleted",
+        "It stays where it is",
+        "It is renamed to b.txt",
+        "It is emptied"
+      ],
+      "answer": 1,
+      "explain": "cp copies; the source is untouched."
+    },
+    {
+      "type": "mcq",
+      "q": "How do you rename a file in Linux?",
+      "options": [
+        "rename a b",
+        "cp a b",
+        "mv a b",
+        "touch a b"
+      ],
+      "answer": 2,
+      "explain": "A rename is a move within the same folder, so mv does it."
+    },
+    {
+      "type": "mcq",
+      "q": "Why does `cp project backup` fail when `project` is a folder?",
+      "options": [
+        "Folders can't be copied",
+        "cp needs -r to copy a folder",
+        "You need sudo",
+        "The name backup is reserved"
+      ],
+      "answer": 1,
+      "explain": "Without -r, cp skips directories."
+    },
+    {
+      "type": "mcq",
+      "q": "`b.txt` already exists. What does `mv a.txt b.txt` do?",
+      "options": [
+        "Refuses with an error",
+        "Asks before replacing",
+        "Replaces b.txt without asking",
+        "Merges the two files"
+      ],
+      "answer": 2,
+      "explain": "mv overwrites silently unless you pass -i."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that copies the folder `site` to `site-backup`, including everything inside it.",
+      "accept": [
+        "cp -r site site-backup",
+        "cp -R site site-backup",
+        "cp --recursive site site-backup",
+        "cp -a site site-backup"
+      ],
+      "explain": "-r (or -R, -a) copies a folder recursively."
+    },
+    {
+      "type": "cmd",
+      "q": "Type the command that renames `draft.md` to `final.md` and asks before overwriting.",
+      "accept": [
+        "mv -i draft.md final.md",
+        "mv --interactive draft.md final.md"
+      ],
+      "explain": "-i asks before replacing an existing file."
+    }
+  ]
+}

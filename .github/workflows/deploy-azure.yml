@@ -1,0 +1,49 @@
+name: Deploy to Azure App Service
+
+# Manual: Actions → "Deploy to Azure App Service" → Run workflow. Needs (see README "Deploying to Azure"):
+#   secrets.AZURE_WEBAPP_PUBLISH_PROFILE  the web app's publish profile (Overview → Download publish profile)
+#   secrets.DATABASE_URL_MIGRATE           a direct (non-pooled) connection string, used only to run migrations
+#   vars.AZURE_WEBAPP_NAME                  the web app's name
+on:
+  workflow_dispatch:
+
+concurrency: deploy-azure
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # match the App Service runtime stack
+          cache: npm
+      - run: npm ci
+
+      - name: Apply database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}
+        run: npx prisma migrate deploy
+
+      - name: Seed the achievement catalogue (idempotent; course content comes through the ingest API)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}
+        run: node scripts/seed.ts --achievements
+
+      - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Assemble the standalone package
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          if [ -d public ]; then cp -r public .next/standalone/public; fi
+          rm -f .next/standalone/.env*   # never ship local env files; App Service settings provide the env
+
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .next/standalone

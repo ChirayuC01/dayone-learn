@@ -1,0 +1,35 @@
+name: Scheduled jobs
+
+# Calls the app's idempotent cron routes. Needs repository secrets APP_URL (e.g. https://learn.example.com)
+# and CRON_SECRET (same value as the app's CRON_SECRET). Re-running a job is always safe.
+on:
+  schedule:
+    - cron: "30 18 * * 0" # Monday 00:00 IST: finalise last week's leagues, place this week, weekly summaries
+    - cron: "7 * * * *" # hourly: streak reminders
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Which job to run
+        type: choice
+        options: [reminders, weekly-league]
+        default: reminders
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    if: ${{ vars.CRON_ENABLED != 'false' }}
+    steps:
+      - name: Pick the job
+        id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "job=${{ inputs.job }}" >> "$GITHUB_OUTPUT";
+          elif [ "${{ github.event.schedule }}" = "30 18 * * 0" ]; then echo "job=weekly-league" >> "$GITHUB_OUTPUT";
+          else echo "job=reminders" >> "$GITHUB_OUTPUT"; fi
+      - name: Call ${{ steps.pick.outputs.job }}
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS --retry 3 --retry-delay 10 --max-time 120 -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/${{ steps.pick.outputs.job }}"
