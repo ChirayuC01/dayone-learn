@@ -105,3 +105,8 @@ export function nextDailyTime(now: Date, hhmm: string, tz: string): Date {
   const t = zonedTimeToUtc(today, hhmm, tz);
   return t.getTime() > now.getTime() ? t : zonedTimeToUtc(addDays(today, 1), hhmm, tz);
 }
+
+/** The hour (0–23) on the wall clock in `tz` at `instant`. */
+export function localHour(instant: Date, tz: string): number {
+  return wallClock(instant, tz).h;
+}

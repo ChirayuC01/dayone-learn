@@ -4,6 +4,8 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { questionsForTrack, type TrackDef } from "../ingest/normalize.ts";
 import { canRead, dayAccess, moduleTestAccess } from "../learning/access.ts";
 import { unlockStateOf } from "../learning/enrollment.ts";
+import { recordActivity, retakesRewardedToday, type Rewards } from "../gamification/service.ts";
+import { lessonQuizAwards, moduleTestAwards } from "../gamification/xp.ts";
 import { localDate } from "../time/zoned.ts";
 import { gradeQuiz, type GivenAnswer, type GradableQuestion, type QuestionResult } from "./grade.ts";
 import { applyAttempt, ATTEMPTS_PER_MINUTE, MODULE_PASS_RATIO } from "./progress.ts";
@@ -81,6 +83,7 @@ export type AttemptResult = {
   /** Module tests only. */
   passed?: boolean;
   firstPass?: boolean;
+  rewards: Rewards;
 };
 
 export async function submitAttempt(
@@ -128,7 +131,7 @@ export async function submitAttempt(
       const next = applyAttempt(prev, { ...grade, at: now }, MODULE_PASS_RATIO);
       const data = { bestScore: next.bestScore, total: next.total, attempts: next.attempts, firstPerfectAt: next.firstPerfectAt, passedAt: next.passedAt };
       await tx.moduleProgress.upsert({ where: key, create: { userId: input.userId, moduleId: input.refId, ...data }, update: data });
-      return { attempt, next, passed: next.passedAt != null };
+      return { attempt, prev, next, passed: next.passedAt != null };
     }
     const key = { userId_lessonId: { userId: input.userId, lessonId: input.refId } };
     const prev = await tx.lessonProgress.findUnique({ where: key });
@@ -139,8 +142,39 @@ export async function submitAttempt(
       create: { userId: input.userId, lessonId: input.refId, courseId: target.courseId, ...data },
       update: data,
     });
-    return { attempt, next, passed: undefined };
+    return { attempt, prev, next, passed: undefined };
   });
+
+  // XP, streak, goal, level and achievements.
+  const awards = isModule
+    ? moduleTestAwards({
+        userId: input.userId,
+        moduleId: input.refId,
+        courseId: target.courseId,
+        firstPass: result.next.firstPass,
+        firstPerfect: result.next.firstPerfect,
+      })
+    : lessonQuizAwards({
+        userId: input.userId,
+        lessonId: input.refId,
+        courseId: target.courseId,
+        attemptId: result.attempt.id,
+        firstAttempt: !result.prev || result.prev.attempts === 0,
+        score: grade.score,
+        total: grade.total,
+        prevBest: result.prev ? { score: result.prev.bestScore, total: result.prev.total } : null,
+        retakesRewardedToday: await retakesRewardedToday(db, input.userId, ctx.today),
+      });
+  const rewards = await recordActivity(db, {
+    userId: input.userId,
+    timezone: input.timezone,
+    now,
+    awards,
+    counts: { quizzes: 1 },
+    completionCourseId: isModule ? target.courseId : undefined,
+  });
+  const quizXp = rewards.breakdown.filter((b) => awards.some((a) => a.reason === b.reason)).reduce((s, b) => s + b.amount, 0);
+  if (quizXp) await db.attempt.update({ where: { id: result.attempt.id }, data: { xpAwarded: quizXp } });
 
   return {
     attemptId: result.attempt.id,
@@ -151,6 +185,7 @@ export async function submitAttempt(
     improved: result.next.improved,
     firstPerfect: result.next.firstPerfect,
     ...(isModule ? { passed: result.passed, firstPass: result.next.firstPass } : {}),
+    rewards,
   };
 }
 

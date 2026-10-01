@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { LockedLesson } from "@/components/learn/LockedLesson";
+import { ReadingTracker } from "@/components/learn/ReadingTracker";
 import { Markdown } from "@/components/Markdown";
 import { Quiz } from "@/components/quiz/Quiz";
 import { lessonMarkdown, lessonTitle, neighbours, pad, parseDayParam, readingMinutes } from "@/lib/content/outline";
@@ -101,6 +102,7 @@ export default async function LessonPage({ params }: Params) {
       <article className="lesson">
         <Markdown>{md}</Markdown>
       </article>
+      {learner.active && <ReadingTracker lessonId={lesson.id} alreadyRead={Boolean(progress?.readAt)} />}
 
       {learner.active ? (
         <Quiz

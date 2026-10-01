@@ -3,6 +3,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { useCelebrate } from "@/components/gamify/Celebrate";
+import { RewardsLine } from "@/components/gamify/RewardsLine";
 import { InlineCode } from "@/components/InlineCode";
 import type { AttemptResult, PublicQuestion, Scope } from "@/lib/quiz/service";
 
@@ -35,12 +37,14 @@ export function Quiz({ scope, refId, title, subtitle, questions, best: initialBe
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [result, setResult] = useState<AttemptResult | null>(null);
   const [best, setBest] = useState(initialBest);
+  const celebrate = useCelebrate();
 
   const mutation = useMutation({
     mutationFn: submit,
     onSuccess: (r) => {
       setResult(r);
       setBest({ score: r.best.score, total: r.best.total });
+      celebrate(r.rewards);
       router.refresh(); // sidebar score chips are server-rendered
     },
   });
@@ -162,6 +166,7 @@ export function Quiz({ scope, refId, title, subtitle, questions, best: initialBe
         );
       })}
 
+      {result && <RewardsLine r={result.rewards} />}
       <div className="quiz-f">
         <span className="note" role={mutation.isError ? "alert" : undefined} style={mutation.isError ? { color: "var(--bad)" } : undefined}>
           {mutation.isError

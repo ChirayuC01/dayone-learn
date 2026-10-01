@@ -48,6 +48,8 @@ lib/                  business rules as pure, unit-tested functions, plus DB ser
   time/               zoned.ts: calendar dates in IANA zones (DST-safe), wall-clock ↔ instant
   learning/           unlock.ts (daily/self pace), access.ts (who can open what), enrollment.ts, learner.ts
   quiz/               grade.ts (grader), progress.ts (best scores, module pass), service.ts (submit + persist)
+  gamification/       xp.ts · levels.ts · streak.ts · goal.ts · achievements.ts + catalog.ts · reading.ts ·
+                      heatmap.ts (all pure) · service.ts (recordActivity) · dashboard.ts
   users/              display names
 auth.ts               Auth.js v5 config (Prisma adapter, database sessions)
 components/           Markdown renderer, reader sidebar/drawer, track toggle, cards
@@ -64,12 +66,13 @@ Code under `lib/` that scripts import uses relative imports with explicit `.ts` 
 |---|---|
 | `/` | Landing: catalogue and how it works (signed-in users go to `/dashboard`) |
 | `/signin` | GitHub / Google / email magic link |
-| `/dashboard` | Continue cards for each enrolled course (gamification arrives in phase 5) |
+| `/dashboard` | Goal ring, streak and freezes, level ring, Continue cards with course progress, achievements, activity heatmap |
 | `/courses` | Catalogue cards (accent, icon, days published, learners) |
 | `/courses/[slug]` | Overview, track picker, syllabus by module (published / upcoming) |
 | `/learn/[slug]/day/[nn]` | Lesson reader with sidebar, track toggle, module-test card on review days, pager |
 | `/learn/[slug]/module/[n]` | Module test (pass mark 70 %) |
-| `POST /api/attempts` | Submit a lesson quiz or module test for grading |
+| `POST /api/attempts` | Submit a lesson quiz or module test for grading (returns XP and other rewards) |
+| `POST /api/reading` | Reading heartbeat: `start`, `beat`, `finish` |
 
 Lesson Markdown is rendered on the server with GFM and `rehype-sanitize`. ` ```bash ` blocks get a `$` prompt per command line and a copy button, ` ```output ` blocks a dashed box, and any other fence a diagram box. Raw HTML is dropped except `<details>`/`<summary>`. An enrolled learner's track is stored on their enrollment; everyone else's in a per-course cookie.
 
@@ -90,6 +93,28 @@ Questions reach the browser without answers or explanations; `POST /api/attempts
 - Typed answers (`CMD`, `TEXT_EXACT`) are trimmed, lose a leading `$ ` (commands only) and trailing `;`, and have whitespace collapsed, then are compared with the normalised `accept` list, case-sensitively unless the question sets `caseSensitive: false`. A case-only miss shows the course's `caseMissMessage`.
 - Each attempt is stored in `Attempt`; `LessonProgress` / `ModuleProgress` keep the best score (compared as a ratio), attempt count, first perfect time and, for module tests, the first pass (≥ 70 %).
 - The server checks enrollment and unlock state for every submission and allows 6 attempts per user per minute.
+
+## Gamification
+
+All rules are pure functions in `lib/gamification/` with unit tests; `recordActivity` applies them in one transaction per user (it locks the user's `Streak` row so concurrent actions can't double-count).
+
+| Event | XP |
+|---|---|
+| Finish reading a lesson (end of the lesson seen, ≥ 60 s on the page, ≥ 3 heartbeats) | 10, once per lesson |
+| Lesson quiz, first attempt | 2 per correct answer, +10 if perfect |
+| Retake that beats the best score | 1 per newly correct answer, for at most 3 rewarded retakes a day |
+| Module test passed (≥ 70 %) | 50 once; perfect +25 once |
+| Review session | 5 (phase 6) |
+| Daily goal hit | +5 |
+| Streak of 7 / 30 / 100 days | +25 / +100 / +300, once each |
+| Course completed (every day read, every module test passed) | +200 |
+
+- **Ledger:** every award is an `XpEvent` with a unique `refKey` (e.g. `quiz-first:{userId}:{lessonId}`), inserted with `skipDuplicates`, so repeating an action never pays twice. Totals are always summed from the ledger.
+- **Levels:** `xpForLevel(n) = 50·n·(n+1)/2` is the total XP to go from level n to n+1 (level 2 at 50 XP, 3 at 150, 4 at 300).
+- **Streak:** global across courses. A day counts when the learner earns XP from a lesson, quiz or review in their own time zone. One freeze to start, one more every 7 streak days (max 2); freezes cover missed days automatically on the next active day.
+- **Daily goal:** 10 / 30 / 50 / 100 XP (default 30), changed from the dashboard.
+- **Achievements:** rows in the `Achievement` table with a `criteria` object (`{"type":"streak","gte":7}`, `{"type":"lessonAtHour","from":22,"to":24}`, …). Add rows with any type from `lib/gamification/achievements.ts` and they are evaluated after every XP-earning action and on enrolment. The seed loads the 12 in `catalog.ts`.
+- **Celebrations:** toasts for XP, level-ups, streaks, goals, achievements and course completion; confetti for the big ones, skipped under `prefers-reduced-motion`.
 
 ## Seed data format
 

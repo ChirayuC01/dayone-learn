@@ -1,9 +1,11 @@
-// Loads every course in reference/seed/<slug>/ through the same service functions the ingest API uses.
+// Seeds the achievement catalogue, then loads every course in reference/seed/<slug>/ through the same
+// service functions the ingest API uses.
 // Run: npm run db:seed   (Node ≥ 22.18 runs TypeScript directly; no build step)
 // Layout per course: course.json, day-NN.json, module-N.json
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import prismaPkg from "@prisma/client";
+import { ACHIEVEMENTS } from "../lib/gamification/catalog.ts";
 import { IngestError } from "../lib/ingest/normalize.ts";
 import { courseSchema, lessonSchema, moduleTestSchema, type CourseInput } from "../lib/ingest/schema.ts";
 import { upsertCourse, upsertLesson, upsertModuleTest, withIngestLog } from "../lib/ingest/service.ts";
@@ -29,7 +31,7 @@ const COURSE_DEFAULTS: Record<string, Partial<CourseInput>> = {
 const readJson = async (path: string): Promise<unknown> => JSON.parse(await readFile(path, "utf8"));
 const fileNumber = (name: string) => Number(/(\d+)\.json$/.exec(name)?.[1]);
 
-async function seedCourse(db: InstanceType<typeof prismaPkg.PrismaClient>, slug: string) {
+async function seedCourse(db: Db, slug: string) {
   const dir = join(SEED_DIR, slug);
   const files = await readdir(dir);
 
@@ -55,10 +57,21 @@ async function seedCourse(db: InstanceType<typeof prismaPkg.PrismaClient>, slug:
   }
 }
 
+type Db = InstanceType<typeof prismaPkg.PrismaClient>;
+
+async function seedAchievements(db: Db) {
+  for (const [i, a] of ACHIEVEMENTS.entries()) {
+    const data = { title: a.title, description: a.description, icon: a.icon, tier: a.tier, criteria: a.criteria, sortOrder: i };
+    await db.achievement.upsert({ where: { key: a.key }, create: { key: a.key, ...data }, update: data });
+  }
+  console.log(`Achievements: ${ACHIEVEMENTS.length} in the catalogue`);
+}
+
 async function main() {
   const db = new prismaPkg.PrismaClient();
   const only = process.argv[2];
   try {
+    await seedAchievements(db);
     const slugs = only ? [only] : (await readdir(SEED_DIR, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
     for (const slug of slugs) {
       console.log(`Seeding ${slug}`);

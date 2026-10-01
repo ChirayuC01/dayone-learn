@@ -6,6 +6,7 @@ import { z } from "zod";
 import { pad } from "@/lib/content/outline";
 import { getCourseOutline } from "@/lib/content/queries";
 import { db } from "@/lib/db";
+import { recordActivity } from "@/lib/gamification/service";
 import { enroll, unenroll, updateEnrollment } from "@/lib/learning/enrollment";
 import { getViewer } from "@/lib/learning/learner";
 import { localDate } from "@/lib/time/zoned";
@@ -41,6 +42,8 @@ export async function enrollAction(formData: FormData) {
   const track = course.tracks.some((t) => t.key === input.data.track) ? input.data.track! : course.defaultTrack;
 
   await enroll(db, { ...base, track, pace: input.data.pace });
+  // Enrolling earns no XP but can unlock Polyglot.
+  await recordActivity(db, { userId: base.userId, timezone: (await getViewer())!.timezone, awards: [] });
   revalidatePath("/", "layout");
   const first = course.lessons[0]?.day;
   redirect(first ? `/learn/${course.slug}/day/${pad(first)}` : `/courses/${course.slug}`);
