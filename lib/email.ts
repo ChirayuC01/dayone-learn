@@ -1,7 +1,7 @@
 // Outgoing email through Resend's REST API. Without RESEND_API_KEY in development, emails are
 // printed to the server console instead (so magic-link sign-in works locally with no setup).
 
-type Email = { to: string; subject: string; html: string; text: string };
+type Email = { to: string; subject: string; html: string; text: string; /** one-click unsubscribe URL (List-Unsubscribe) */ unsubscribe?: string };
 
 export async function sendEmail(email: Email): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -13,7 +13,14 @@ export async function sendEmail(email: Email): Promise<void> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM ?? "DayOne <onboarding@resend.dev>", ...email }),
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM ?? "DayOne <onboarding@resend.dev>",
+      to: email.to,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      ...(email.unsubscribe ? { headers: { "List-Unsubscribe": `<${email.unsubscribe}>` } } : {}),
+    }),
   });
   if (!res.ok) throw new Error(`Resend error ${res.status}: ${await res.text()}`);
 }

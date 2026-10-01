@@ -51,6 +51,8 @@ lib/                  business rules as pure, unit-tested functions, plus DB ser
   gamification/       xp.ts · levels.ts · streak.ts · goal.ts · achievements.ts + catalog.ts · reading.ts ·
                       heatmap.ts (all pure) · service.ts (recordActivity) · dashboard.ts
   review/             leitner.ts (boxes, due dates, session picking; pure) · service.ts (queue + sessions)
+  league/             league.ts (weeks, cohorts, zones; pure) · service.ts (finalise, place, standings, all-time board)
+  notify/             reminders.ts + unsubscribe.ts (pure) · emails.ts (templates) · service.ts (send reminders/summaries)
   users/              display names
 auth.ts               Auth.js v5 config (Prisma adapter, database sessions)
 components/           Markdown renderer, reader sidebar/drawer, track toggle, cards
@@ -76,6 +78,12 @@ Code under `lib/` that scripts import uses relative imports with explicit `.ts` 
 | `POST /api/reading` | Reading heartbeat: `start`, `beat`, `finish` |
 | `/review` | Spaced-repetition session: up to 5 due questions mixed from all enrolled courses |
 | `POST /api/review` | Grade a review session |
+| `/leaderboard` | This week's league (your cohort, zones, XP to promotion) and the opt-in all-time XP board |
+| `/profile/[displayName]` | Level, streak, league tier, courses and trophy case (public only if the learner allows it) |
+| `/settings` | Display name, time zone, daily goal, reminder, weekly summary, league / board / profile privacy, sign out, delete account |
+| `/unsubscribe` | One-click email unsubscribe from a signed link (with a confirm button) |
+| `POST /api/cron/weekly-league` | Monday job: finalise last week, place this week, send weekly summaries |
+| `POST /api/cron/reminders` | Hourly job: streak reminder emails |
 
 Lesson Markdown is rendered on the server with GFM and `rehype-sanitize`. ` ```bash ` blocks get a `$` prompt per command line and a copy button, ` ```output ` blocks a dashed box, and any other fence a diagram box. Raw HTML is dropped except `<details>`/`<summary>`. An enrolled learner's track is stored on their enrollment; everyone else's in a per-course cookie.
 
@@ -126,6 +134,29 @@ All rules are pure functions in `lib/gamification/` with unit tests; `recordActi
 - `/review` serves up to 5 due questions, most overdue first, taking courses in turn so a session mixes them. Only active enrollments, the learner's track and non-hidden questions count.
 - Correct moves a question up a box (box 5 stays at 5); wrong sends it back to box 1.
 - `POST /api/review` grades on the server and only accepts questions that are due right now, so a replayed submission is rejected (409). Each session is stored as a `REVIEW` attempt; its answers count towards the Reviewer achievement.
+
+## Leagues, reminders and cron jobs
+
+- **Weeks** run from Monday 00:00 IST. Active learners (XP in the last 14 days) who haven't opted out are placed in cohorts of up to 30 within their tier (Bronze → Silver → Gold → Sapphire → Diamond), ranked by XP earned that week.
+- At the end of the week the top 5 move up and the bottom 5 move down (no demotion from Bronze, no promotion from Diamond). Small cohorts use smaller zones (a third each) so they never overlap, and nobody is promoted with 0 XP.
+- A learner who becomes active mid-week joins a cohort the first time they open the dashboard or leaderboard (same placement code as the Monday job).
+- **Reminders:** opt-in, sent once a day in the two hours after the learner's chosen local time, only if they haven't learned yet that day. **Weekly summary:** opt-in, sent by the Monday job. Both go through Resend with a signed unsubscribe link and a `List-Unsubscribe` header.
+- **Cron routes** require `Authorization: Bearer $CRON_SECRET` (constant-time compare) and are idempotent: finished weeks, placed users and sent emails are recorded and skipped on a re-run; placement takes a Postgres advisory lock.
+
+```bash
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/weekly-league"   # Mondays 00:00 IST (Sun 18:30 UTC)
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/reminders"       # hourly
+```
+
+`.github/workflows/cron.yml` calls both on schedule (set repository secrets `APP_URL` and `CRON_SECRET`; run either by hand from the Actions tab). An Azure Functions timer can call the same URLs instead.
+
+### Running SQL by hand (Windows)
+
+Windows PowerShell strips the double quotes Prisma's table names need when it passes a command to `psql`. Use Prisma, which reads `DATABASE_URL` from `.env` and works in every shell:
+
+```powershell
+'update "ReviewItem" set "dueAt" = now();' | npx prisma db execute --stdin --schema prisma/schema.prisma
+```
 
 ## Seed data format
 

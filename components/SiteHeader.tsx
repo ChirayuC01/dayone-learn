@@ -18,11 +18,19 @@ export async function SiteHeader() {
           Courses
         </NavLink>
         {viewer ? (
-          <form action={signOutAction}>
-            <button type="submit" className="navbtn" title={`Signed in as ${viewer.displayName ?? viewer.email ?? ""}`}>
-              Sign out
-            </button>
-          </form>
+          <details className="acct">
+            <summary>Account ▾</summary>
+            <div className="acct-menu">
+              {viewer.displayName && <Link href={`/profile/${viewer.displayName}`}>Profile</Link>}
+              <Link href="/leaderboard">Leaderboard</Link>
+              <Link href="/settings">Settings</Link>
+              <form action={signOutAction}>
+                <button type="submit" className="navbtn">
+                  Sign out
+                </button>
+              </form>
+            </div>
+          </details>
         ) : (
           <NavLink href="/signin">Sign in</NavLink>
         )}

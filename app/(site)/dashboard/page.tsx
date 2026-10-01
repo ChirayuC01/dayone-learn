@@ -13,13 +13,14 @@ import { GOAL_OPTIONS } from "@/lib/gamification/goal";
 import { canRead, continueDay } from "@/lib/learning/access";
 import { describeNextUnlock } from "@/lib/learning/format";
 import { getReadDays, getViewer, learnerView } from "@/lib/learning/learner";
+import { myStanding } from "@/lib/league/service";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function Dashboard() {
   const viewer = await getViewer();
   if (!viewer) redirect("/signin?callbackUrl=/dashboard");
-  const loop = await getHookLoop(viewer.id, viewer.timezone);
+  const [loop, standing] = await Promise.all([getHookLoop(viewer.id, viewer.timezone), myStanding(db, viewer.id)]);
 
   const enrollments = await db.enrollment.findMany({
     where: { userId: viewer.id, archivedAt: null },
@@ -116,6 +117,34 @@ export default async function Dashboard() {
             <p className="note">{level.xp} XP total</p>
           </div>
         </section>
+
+        <Link href="/leaderboard" className="hook-card hook-link" aria-labelledby="league-h">
+          <span className="flame lit" aria-hidden="true">
+            🏆
+          </span>
+          <div>
+            {standing.status === "member" ? (
+              <>
+                <h2 id="league-h">
+                  #{standing.me.rank} in {standing.tier.charAt(0) + standing.tier.slice(1).toLowerCase()}
+                </h2>
+                <p>
+                  {standing.toPromotion === 0
+                    ? "In the promotion zone."
+                    : standing.toPromotion
+                      ? `${standing.toPromotion} XP to promotion.`
+                      : "Top league: hold your place."}
+                </p>
+                <p className="note">{standing.me.weeklyXp} XP this week</p>
+              </>
+            ) : (
+              <>
+                <h2 id="league-h">League</h2>
+                <p>{standing.status === "opted-out" ? "You've left weekly leagues." : "Earn XP to join this week's league."}</p>
+              </>
+            )}
+          </div>
+        </Link>
       </div>
 
       {loop.reviewDue > 0 && (
