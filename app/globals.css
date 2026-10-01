@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/* Design tokens ported 1:1 from reference/prototype.html. Dark first, light via prefers-color-scheme or data-theme. */
+:root {
+  --bg: #0f1318;
+  --panel: #151b22;
+  --raised: #1b232c;
+  --line: #2a3440;
+  --fg: #e3e8ee;
+  --muted: #93a0ae;
+  --accent: #f0b44c;
+  --accent-ink: #1a1206;
+  --ok: #5fd0a6;
+  --bad: #ff7d7d;
+  --code-bg: #0a0d11;
+  --out: #b9c4cf;
+  --f-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --f-body: var(--font-atkinson), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f5f6f3;
+    --panel: #ffffff;
+    --raised: #eef0ec;
+    --line: #d7dbd3;
+    --fg: #1b2026;
+    --muted: #5b6672;
+    --accent: #a86a00;
+    --accent-ink: #fff8ec;
+    --ok: #11845f;
+    --bad: #c23b3b;
+    --code-bg: #1b2026;
+    --out: #c9d2db;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f5f6f3;
+  --panel: #ffffff;
+  --raised: #eef0ec;
+  --line: #d7dbd3;
+  --fg: #1b2026;
+  --muted: #5b6672;
+  --accent: #a86a00;
+  --accent-ink: #fff8ec;
+  --ok: #11845f;
+  --bad: #c23b3b;
+  --code-bg: #1b2026;
+  --out: #c9d2db;
+  color-scheme: light;
+}
+
+/* Expose the tokens as Tailwind utilities: bg-panel, text-muted, border-line, font-display, … */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok);
+  --color-bad: var(--bad);
+  --color-code-bg: var(--code-bg);
+  --color-out: var(--out);
+  --font-display: var(--f-display);
+  --font-body: var(--f-body);
+  --font-mono: var(--f-mono);
+}
+
+@layer base {
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.6 var(--f-body);
+    margin: 0;
+  }
+  a {
+    color: var(--accent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  code,
+  kbd,
+  pre {
+    font-family: var(--f-mono);
+  }
+}

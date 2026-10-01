@@ -1,0 +1,493 @@
+// DayOne Learn data model.
+// Conventions: dates that mean "a calendar day in the user's time zone" use @db.Date;
+// instants use DateTime (UTC). XP totals are always derived from XpEvent.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum CourseStatus {
+  DRAFT
+  LIVE
+  ARCHIVED
+}
+
+enum Pace {
+  DAILY
+  SELF
+}
+
+enum QuestionKind {
+  MCQ
+  CMD
+  TEXT_EXACT
+}
+
+enum AttemptScope {
+  LESSON
+  MODULE
+  REVIEW
+}
+
+enum XpReason {
+  LESSON_READ
+  QUIZ_CORRECT
+  QUIZ_PERFECT
+  RETAKE_IMPROVEMENT
+  MODULE_PASSED
+  MODULE_PERFECT
+  REVIEW_SESSION
+  DAILY_GOAL
+  STREAK_MILESTONE
+  COURSE_COMPLETED
+}
+
+enum AchievementTier {
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum LeagueTier {
+  BRONZE
+  SILVER
+  GOLD
+  SAPPHIRE
+  DIAMOND
+}
+
+enum LeagueOutcome {
+  PROMOTED
+  STAYED
+  DEMOTED
+}
+
+enum IngestKind {
+  COURSE
+  LESSON
+  APPEND
+  MODULE
+}
+
+enum IngestStatus {
+  OK
+  ERROR
+}
+
+// ───────────────────────── Auth.js ─────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(USER)
+
+  displayName String? @unique
+  avatarSeed  String  @default(cuid())
+  timezone    String  @default("Asia/Kolkata") // IANA zone
+
+  // settings
+  profilePublic     Boolean    @default(false)
+  leagueOptOut      Boolean    @default(false)
+  allTimeBoardOptIn Boolean    @default(false)
+  reminderEnabled   Boolean    @default(false)
+  reminderTime      String     @default("19:00") // HH:MM, user's local time
+  weeklySummary     Boolean    @default(false)
+  leagueTier        LeagueTier @default(BRONZE)
+
+  // cron idempotency markers (local dates)
+  lastReminderOn      DateTime? @db.Date
+  lastWeeklySummaryOn DateTime? @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  enrollments      Enrollment[]
+  lessonProgress   LessonProgress[]
+  moduleProgress   ModuleProgress[]
+  attempts         Attempt[]
+  xpEvents         XpEvent[]
+  streak           Streak?
+  dailyGoal        DailyGoal?
+  dailyActivity    DailyActivity[]
+  achievements     UserAchievement[]
+  leagueMembership LeagueMember[]
+  reviewItems      ReviewItem[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ───────────────────────── Content ─────────────────────────
+
+model Course {
+  id              String       @id @default(cuid())
+  slug            String       @unique
+  title           String
+  tagline         String       @default("")
+  description     String       @default("")
+  accent          String       @default("#f0b44c") // hex colour
+  icon            String       @default("$_") // short glyph or emoji
+  status          CourseStatus @default(DRAFT)
+  tracks          Json // [{ key, label }]
+  defaultTrack    String
+  totalDays       Int
+  caseMissMessage String       @default("Close: answers are case-sensitive.")
+  ingestTime      String       @default("04:30") // HH:MM in ingestTimezone; shown as "next lesson arrives"
+  ingestTimezone  String       @default("Asia/Kolkata")
+  notionPageId    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  modules     Module[]
+  syllabus    SyllabusDay[]
+  lessons     Lesson[]
+  questions   Question[]
+  enrollments Enrollment[]
+}
+
+model Module {
+  id       String @id @default(cuid())
+  courseId String
+  number   Int
+  title    String
+  dayFrom  Int
+  dayTo    Int
+
+  course    Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+  progress  ModuleProgress[]
+
+  @@unique([courseId, number])
+}
+
+/// The full plan, including days that are not published yet.
+model SyllabusDay {
+  courseId     String
+  day          Int
+  moduleNumber Int
+  title        String
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, day])
+}
+
+model Lesson {
+  id           String   @id @default(cuid())
+  courseId     String
+  day          Int
+  moduleNumber Int
+  title        String
+  trackTitles  Json? // { trackKey: title }
+  content      Json // { trackKey: markdown }
+  publishedAt  DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course    Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+  progress  LessonProgress[]
+
+  @@unique([courseId, day])
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  courseId      String
+  lessonId      String?
+  moduleId      String?
+  kind          QuestionKind
+  tracks        String[] // empty = every track
+  prompt        String
+  options       String[]
+  answerIndex   Int?
+  accept        String[]
+  caseSensitive Boolean      @default(true)
+  explain       String       @default("")
+  order         Int
+  hidden        Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson      Lesson?      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  module      Module?      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  reviewItems ReviewItem[]
+
+  // Re-ingesting a quiz updates questions in place by position, so review history survives.
+  @@unique([lessonId, order])
+  @@unique([moduleId, order])
+}
+
+// ───────────────────────── Progress ─────────────────────────
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  userId      String
+  courseId    String
+  track       String
+  pace        Pace      @default(DAILY)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  archivedAt  DateTime? // set on unenroll; progress is kept
+  currentDay  Int       @default(1)
+
+  // Daily pace: unlocked = min(latest published, anchorDay + local days since anchorDate).
+  // Moved when switching to DAILY so already-open days never re-lock.
+  dailyAnchorDate DateTime @db.Date
+  dailyAnchorDay  Int      @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+model LessonProgress {
+  userId         String
+  lessonId       String
+  courseId       String
+  readAt         DateTime?
+  bestScore      Int       @default(0)
+  total          Int       @default(0)
+  attempts       Int       @default(0)
+  firstPerfectAt DateTime?
+
+  // reading heartbeat (anti-abuse for the reading XP)
+  readingStartedAt DateTime?
+  lastHeartbeatAt  DateTime?
+  heartbeats       Int       @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, lessonId])
+  @@index([userId, courseId])
+}
+
+model ModuleProgress {
+  userId         String
+  moduleId       String
+  bestScore      Int       @default(0)
+  total          Int       @default(0)
+  attempts       Int       @default(0)
+  passedAt       DateTime?
+  firstPerfectAt DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, moduleId])
+}
+
+model Attempt {
+  id        String       @id @default(cuid())
+  userId    String
+  courseId  String? // null for mixed-course review sessions
+  scope     AttemptScope
+  refId     String // lessonId | moduleId | review session id
+  track     String?
+  score     Int
+  total     Int
+  answers   Json // [{ questionId, given, correct }]
+  xpAwarded Int          @default(0)
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, scope, refId])
+}
+
+// ───────────────────────── Gamification ─────────────────────────
+
+/// The XP ledger. refKey makes every award idempotent, e.g. quiz-first:{userId}:{lessonId}.
+model XpEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String?
+  reason    XpReason
+  amount    Int
+  refKey    String   @unique
+  localDate DateTime @db.Date // the user's calendar day when earned
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, localDate])
+  @@index([createdAt])
+}
+
+model Streak {
+  userId         String    @id
+  current        Int       @default(0)
+  longest        Int       @default(0)
+  lastActiveDate DateTime? @db.Date
+  freezes        Int       @default(1)
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyGoal {
+  userId      String    @id
+  targetXp    Int       @default(30) // 10 | 30 | 50 | 100
+  lastHitDate DateTime? @db.Date
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyActivity {
+  userId  String
+  date    DateTime @db.Date
+  xp      Int      @default(0)
+  lessons Int      @default(0)
+  quizzes Int      @default(0)
+  reviews Int      @default(0)
+  frozen  Boolean  @default(false) // a streak freeze covered this day
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, date])
+}
+
+/// Seeded catalogue. `criteria` is evaluated by lib/gamification, e.g. { "type": "streak", "gte": 7 }.
+model Achievement {
+  key         String          @id
+  title       String
+  description String
+  icon        String
+  tier        AchievementTier @default(BRONZE)
+  criteria    Json
+  sortOrder   Int             @default(0)
+
+  unlocks UserAchievement[]
+}
+
+model UserAchievement {
+  userId     String
+  key        String
+  unlockedAt DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [key], references: [key], onDelete: Cascade)
+
+  @@id([userId, key])
+}
+
+model League {
+  id        String     @id @default(cuid())
+  weekStart DateTime   @db.Date // Monday, IST
+  tier      LeagueTier
+  cohort    Int
+  createdAt DateTime   @default(now())
+
+  members LeagueMember[]
+
+  @@unique([weekStart, tier, cohort])
+}
+
+model LeagueMember {
+  leagueId  String
+  userId    String
+  weekStart DateTime       @db.Date // denormalised so a user is in one league per week
+  weeklyXp  Int            @default(0)
+  finalRank Int?
+  outcome   LeagueOutcome?
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([leagueId, userId])
+  @@unique([userId, weekStart])
+}
+
+/// Leitner spaced repetition: box 1–5, due in 1 / 2 / 4 / 8 / 16 days.
+model ReviewItem {
+  userId     String
+  questionId String
+  courseId   String
+  box        Int      @default(1)
+  dueAt      DateTime
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, questionId])
+  @@index([userId, dueAt])
+}
+
+// ───────────────────────── Operations ─────────────────────────
+
+model IngestLog {
+  id         String       @id @default(cuid())
+  courseSlug String
+  kind       IngestKind
+  day        Int?
+  status     IngestStatus
+  message    String
+  createdAt  DateTime     @default(now())
+
+  @@index([courseSlug, createdAt])
+}
