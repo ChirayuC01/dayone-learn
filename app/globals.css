@@ -950,3 +950,119 @@
     margin-bottom: 6px;
   }
 }
+
+/* quiz questions (ported from the prototype) */
+@layer components {
+  .q {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .q-num {
+    font: 600 12px var(--f-mono);
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .q-text {
+    font-weight: 700;
+    margin: 0 0 12px;
+  }
+  .q-text code,
+  .opt code,
+  .fb code {
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0 4px;
+    font-weight: 400;
+    font-size: 0.9em;
+    overflow-wrap: anywhere;
+  }
+  .opts {
+    display: grid;
+    gap: 8px;
+  }
+  .opt {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .opt .k {
+    font: 600 12px/1.6 var(--f-mono);
+    color: var(--muted);
+    flex: none;
+  }
+  .opt:hover {
+    border-color: var(--muted);
+  }
+  .opt[aria-pressed="true"] {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .opt.right {
+    border-color: var(--ok);
+    box-shadow: inset 0 0 0 1px var(--ok);
+  }
+  .opt.wrong {
+    border-color: var(--bad);
+    box-shadow: inset 0 0 0 1px var(--bad);
+  }
+  .opt:disabled {
+    cursor: default;
+  }
+  .term {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .term span {
+    font: 600 14px var(--f-mono);
+    color: var(--c-accent-dark, #f0b44c);
+  }
+  .term input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    color: #e9eef3;
+    font: 16px var(--f-mono); /* 16px stops iOS zooming on focus */
+    outline: none;
+  }
+  .term:focus-within {
+    border-color: var(--accent);
+  }
+  .term.right {
+    border-color: var(--ok);
+  }
+  .term.wrong {
+    border-color: var(--bad);
+  }
+  .fb {
+    margin-top: 10px;
+    font-size: 15px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--raised);
+  }
+  .fb b.ok {
+    color: var(--ok);
+  }
+  .fb b.bad {
+    color: var(--bad);
+  }
+  .result {
+    font: 600 15px var(--f-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}

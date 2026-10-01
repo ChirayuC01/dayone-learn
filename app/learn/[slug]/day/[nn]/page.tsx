@@ -3,12 +3,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { LockedLesson } from "@/components/learn/LockedLesson";
 import { Markdown } from "@/components/Markdown";
+import { Quiz } from "@/components/quiz/Quiz";
 import { lessonMarkdown, lessonTitle, neighbours, pad, parseDayParam, readingMinutes } from "@/lib/content/outline";
 import { getCourseOutline, getLesson } from "@/lib/content/queries";
 import { db } from "@/lib/db";
 import { canRead } from "@/lib/learning/access";
 import { describeNextUnlock } from "@/lib/learning/format";
 import { learnerView } from "@/lib/learning/learner";
+import { publicQuestions } from "@/lib/quiz/service";
 
 type Params = { params: Promise<{ slug: string; nn: string }> };
 
@@ -78,6 +80,9 @@ export default async function LessonPage({ params }: Params) {
     await db.enrollment.update({ where: { id: learner.active.id }, data: { currentDay: day } });
   }
 
+  const progress = learner.active
+    ? await db.lessonProgress.findUnique({ where: { userId_lessonId: { userId: learner.active.userId, lessonId: lesson.id } } })
+    : null;
   const md = lessonMarkdown(lesson.content, track, course.defaultTrack);
   const questions = lesson.questionCount(track);
   // The pager only links days this viewer can open.
@@ -97,29 +102,34 @@ export default async function LessonPage({ params }: Params) {
         <Markdown>{md}</Markdown>
       </article>
 
-      <section className="quiz" id="quiz" aria-labelledby="quiz-h">
-        <div className="quiz-h">
-          <h2 id="quiz-h">Check yourself</h2>
-          <p>
-            Day {pad(day)} quiz · {questions} {questions === 1 ? "question" : "questions"}
-          </p>
-        </div>
-        <div className="quiz-f">
-          {learner.active ? (
-            <span className="note">Quizzes arrive in the next update.</span>
-          ) : (
-            <>
-              <span className="note">Enroll to take the quiz and save your score.</span>
-              <Link
-                className="btn"
-                href={learner.viewer ? `/courses/${slug}#enroll` : `/signin?callbackUrl=${encodeURIComponent(`/courses/${slug}`)}`}
-              >
-                {learner.viewer ? "Enroll" : "Sign in to enroll"}
-              </Link>
-            </>
-          )}
-        </div>
-      </section>
+      {learner.active ? (
+        <Quiz
+          scope="LESSON"
+          refId={lesson.id}
+          title="Check yourself"
+          subtitle={`Day ${pad(day)} quiz`}
+          questions={await publicQuestions(db, "LESSON", lesson.id, track)}
+          best={progress && progress.attempts > 0 ? { score: progress.bestScore, total: progress.total } : null}
+        />
+      ) : (
+        <section className="quiz" id="quiz" aria-labelledby="quiz-h">
+          <div className="quiz-h">
+            <h2 id="quiz-h">Check yourself</h2>
+            <p>
+              Day {pad(day)} quiz · {questions} {questions === 1 ? "question" : "questions"}
+            </p>
+          </div>
+          <div className="quiz-f">
+            <span className="note">Enroll to take the quiz and save your score.</span>
+            <Link
+              className="btn"
+              href={learner.viewer ? `/courses/${slug}#enroll` : `/signin?callbackUrl=${encodeURIComponent(`/courses/${slug}`)}`}
+            >
+              {learner.viewer ? "Enroll" : "Sign in to enroll"}
+            </Link>
+          </div>
+        </section>
+      )}
 
       {isReviewDay && mod && (
         <div className="next" style={{ marginTop: 24 }}>

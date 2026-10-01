@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import { pad, parseDayParam } from "@/lib/content/outline";
 import { getCourseOutline, getModuleTest } from "@/lib/content/queries";
 import Link from "next/link";
+import { Quiz } from "@/components/quiz/Quiz";
+import { db } from "@/lib/db";
 import { learnerView } from "@/lib/learning/learner";
+import { MODULE_PASS_RATIO } from "@/lib/quiz/progress";
+import { publicQuestions } from "@/lib/quiz/service";
 
 type Params = { params: Promise<{ slug: string; n: string }> };
 
@@ -25,6 +29,9 @@ export default async function ModuleTestPage({ params }: Params) {
   const questions = mod.questionCount(learner.track);
   const outlineMod = course.modules.find((m) => m.number === mod.number)!;
   const access = learner.moduleAccess(outlineMod);
+  const progress = learner.active
+    ? await db.moduleProgress.findUnique({ where: { userId_moduleId: { userId: learner.active.userId, moduleId: mod.id } } })
+    : null;
 
   return (
     <>
@@ -59,17 +66,18 @@ export default async function ModuleTestPage({ params }: Params) {
         <>
           <p className="prose-p">
             This test mixes questions from every lesson in the module. Take it after the review day, and retake it as
-            often as you like: your best score counts. You need 70% to pass.
+            often as you like: your best score counts. You need {Math.round(MODULE_PASS_RATIO * 100)}% to pass.
           </p>
-          <section className="quiz" aria-labelledby="quiz-h">
-            <div className="quiz-h">
-              <h2 id="quiz-h">Module {mod.number} test</h2>
-              <p>Covers the whole module · {questions} questions</p>
-            </div>
-            <div className="quiz-f">
-              <span className="note">Tests arrive in the next update.</span>
-            </div>
-          </section>
+          <Quiz
+            scope="MODULE"
+            refId={mod.id}
+            title={`Module ${mod.number} test`}
+            subtitle="Covers the whole module"
+            questions={await publicQuestions(db, "MODULE", mod.id, learner.track)}
+            best={progress && progress.attempts > 0 ? { score: progress.bestScore, total: progress.total } : null}
+            passRatio={MODULE_PASS_RATIO}
+          />
+          {progress?.passedAt && <p className="note">Passed. Your best score counts.</p>}
         </>
       )}
     </>

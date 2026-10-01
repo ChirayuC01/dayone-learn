@@ -9,7 +9,8 @@ import { buildOutline, pad } from "@/lib/content/outline";
 import { getCourseOutline } from "@/lib/content/queries";
 import { accentStyle } from "@/lib/content/theme";
 import { canRead, continueDay } from "@/lib/learning/access";
-import { getReadDays, learnerView } from "@/lib/learning/learner";
+import { getCourseProgress, getReadDays, learnerView } from "@/lib/learning/learner";
+import { ScoreChip } from "@/components/learn/ScoreChip";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -27,6 +28,8 @@ export default async function CourseOverview({ params }: Params) {
   const openDays = learner.published.filter((d) => canRead(learner.access(d)));
   const readDays = learner.active ? await getReadDays(learner.active.userId, course.id) : new Set<number>();
   const continueTo = continueDay(openDays, readDays);
+  const scores = learner.active ? await getCourseProgress(learner.active.userId, course.id) : null;
+  const questionCount = new Map(course.lessons.map((l) => [l.day, l.questionCount]));
   const published = course.lessons.length;
   const first = course.lessons[0];
   const base = `/learn/${course.slug}`;
@@ -110,7 +113,14 @@ export default async function CourseOverview({ params }: Params) {
             </span>
           </div>
           {m.days.map((d) => (
-            <DayRow key={d.day} slug={course.slug} day={d} chip={lockChip(learner, d.day)} />
+            <DayRow
+              key={d.day}
+              slug={course.slug}
+              day={d}
+              chip={lockChip(learner, d.day)}
+              score={scores?.lessons.get(d.day)}
+              quiz={Boolean(scores && questionCount.get(d.day))}
+            />
           ))}
           {m.hasTest && (
             <Link
@@ -119,7 +129,7 @@ export default async function CourseOverview({ params }: Params) {
             >
               <span className="n">★</span>
               <span>Module {m.number} test</span>
-              <span className="chip new">test</span>
+              {scores?.modules.get(m.number) ? <ScoreChip {...scores.modules.get(m.number)!} /> : <span className="chip new">test</span>}
             </Link>
           )}
         </section>

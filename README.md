@@ -47,6 +47,7 @@ lib/                  business rules as pure, unit-tested functions, plus DB ser
   markdown/           remark-details.ts (the only raw HTML allowed in lessons: <details>/<summary>)
   time/               zoned.ts: calendar dates in IANA zones (DST-safe), wall-clock ↔ instant
   learning/           unlock.ts (daily/self pace), access.ts (who can open what), enrollment.ts, learner.ts
+  quiz/               grade.ts (grader), progress.ts (best scores, module pass), service.ts (submit + persist)
   users/              display names
 auth.ts               Auth.js v5 config (Prisma adapter, database sessions)
 components/           Markdown renderer, reader sidebar/drawer, track toggle, cards
@@ -67,7 +68,8 @@ Code under `lib/` that scripts import uses relative imports with explicit `.ts` 
 | `/courses` | Catalogue cards (accent, icon, days published, learners) |
 | `/courses/[slug]` | Overview, track picker, syllabus by module (published / upcoming) |
 | `/learn/[slug]/day/[nn]` | Lesson reader with sidebar, track toggle, module-test card on review days, pager |
-| `/learn/[slug]/module/[n]` | Module test page (questions arrive in phase 4) |
+| `/learn/[slug]/module/[n]` | Module test (pass mark 70 %) |
+| `POST /api/attempts` | Submit a lesson quiz or module test for grading |
 
 Lesson Markdown is rendered on the server with GFM and `rehype-sanitize`. ` ```bash ` blocks get a `$` prompt per command line and a copy button, ` ```output ` blocks a dashed box, and any other fence a diagram box. Raw HTML is dropped except `<details>`/`<summary>`. An enrolled learner's track is stored on their enrollment; everyone else's in a per-course cookie.
 
@@ -79,6 +81,15 @@ Lesson Markdown is rendered on the server with GFM and `rehype-sanitize`. ` ```b
 - Not enrolled (or signed out): Day 01 is a free preview; other days and module tests ask you to enroll. Locked content never reaches the browser.
 - A module test opens with its module's review day.
 - A caught-up learner sees when the next lesson arrives: the course's ingest time (`ingestTime` in `ingestTimezone`) shown in their own zone.
+
+## Quizzes
+
+Questions reach the browser without answers or explanations; `POST /api/attempts` grades on the server and only then returns the right answer and explanation for each question.
+
+- Questions are filtered by the enrollment's track (an empty `tracks` list means every track).
+- Typed answers (`CMD`, `TEXT_EXACT`) are trimmed, lose a leading `$ ` (commands only) and trailing `;`, and have whitespace collapsed, then are compared with the normalised `accept` list, case-sensitively unless the question sets `caseSensitive: false`. A case-only miss shows the course's `caseMissMessage`.
+- Each attempt is stored in `Attempt`; `LessonProgress` / `ModuleProgress` keep the best score (compared as a ratio), attempt count, first perfect time and, for module tests, the first pass (≥ 70 %).
+- The server checks enrollment and unlock state for every submission and allows 6 attempts per user per minute.
 
 ## Seed data format
 

@@ -3,6 +3,7 @@ import { Atkinson_Hyperlegible, Bricolage_Grotesque, JetBrains_Mono } from "next
 import { TimezoneSync } from "@/components/TimezoneSync";
 import { getViewer } from "@/lib/learning/learner";
 import "./globals.css";
+import { Providers } from "./providers";
 
 const atkinson = Atkinson_Hyperlegible({
   subsets: ["latin"],
@@ -23,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${atkinson.variable} ${bricolage.variable} ${jetbrains.variable}`}>
       <body>
-        {children}
+        <Providers>{children}</Providers>
         {viewer && !viewer.timezoneConfirmed && <TimezoneSync />}
       </body>
     </html>

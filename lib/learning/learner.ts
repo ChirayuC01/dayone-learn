@@ -56,3 +56,25 @@ export const getReadDays = cache(async (userId: string, courseId: string) => {
   });
   return new Set(rows.map((r) => r.lesson.day));
 });
+
+export type Score = { best: number; total: number };
+
+/** Best scores per lesson day and per module number, for chips and the dashboard. */
+export const getCourseProgress = cache(async (userId: string, courseId: string) => {
+  const [lessons, modules] = await Promise.all([
+    db.lessonProgress.findMany({
+      where: { userId, courseId, attempts: { gt: 0 } },
+      select: { bestScore: true, total: true, lesson: { select: { day: true } } },
+    }),
+    db.moduleProgress.findMany({
+      where: { userId, module: { courseId }, attempts: { gt: 0 } },
+      select: { bestScore: true, total: true, passedAt: true, module: { select: { number: true } } },
+    }),
+  ]);
+  return {
+    lessons: new Map<number, Score>(lessons.map((p) => [p.lesson.day, { best: p.bestScore, total: p.total }])),
+    modules: new Map<number, Score & { passed: boolean }>(
+      modules.map((p) => [p.module.number, { best: p.bestScore, total: p.total, passed: p.passedAt !== null }]),
+    ),
+  };
+});

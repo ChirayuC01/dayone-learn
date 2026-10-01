@@ -35,14 +35,25 @@ export const getCourseOutline = cache(async (slug: string) => {
         include: { _count: { select: { questions: { where: { hidden: false } } } } },
       },
       syllabus: { orderBy: { day: "asc" } },
-      lessons: { orderBy: { day: "asc" }, select: { day: true, title: true, trackTitles: true, moduleNumber: true } },
+      lessons: {
+        orderBy: { day: "asc" },
+        select: {
+          id: true,
+          day: true,
+          title: true,
+          trackTitles: true,
+          moduleNumber: true,
+          _count: { select: { questions: { where: { hidden: false } } } },
+        },
+      },
       _count: { select: { enrollments: { where: { archivedAt: null } } } },
     },
   });
   if (!course || course.status === "DRAFT") return null;
-  const { _count, modules, ...rest } = course;
+  const { _count, modules, lessons, ...rest } = course;
   return {
     ...rest,
+    lessons: lessons.map(({ _count: l, ...lesson }) => ({ ...lesson, questionCount: l.questions })),
     tracks: course.tracks as TrackDef[],
     enrolled: _count.enrollments,
     modules: modules.map(({ _count: m, ...mod }) => ({ ...mod, testQuestions: m.questions })),
